@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::{story::StoryCommands, world::WorldCommands};
+use crate::{story::{StoryCommands, EpisodeCommands}, world::WorldCommands};
 
 #[derive(Parser)]
 #[command(name = "multiverse")]
@@ -22,6 +22,12 @@ pub enum Commands {
     Story {
         #[command(subcommand)]
         command: StoryCommands,
+    },
+    
+    /// Manage episodes (requires being in a multiverse project)
+    Episode {
+        #[command(subcommand)]
+        command: EpisodeCommands,
     },
     
     /// Show project information

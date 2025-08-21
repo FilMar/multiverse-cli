@@ -1,7 +1,7 @@
-use super::models::{Story, Episode, StoryStatus, EpisodeStatus};
+use super::story_models::{Story, StoryStatus};
+use super::episode_models::{Episode, EpisodeStatus};
 use anyhow::{Result, Context};
 use rusqlite::{Connection, params};
-use std::path::Path;
 
 /// Initialize story-related tables in the database
 pub fn init_story_tables(conn: &Connection) -> Result<()> {
@@ -155,4 +155,144 @@ pub fn delete_story(conn: &Connection, name: &str) -> Result<()> {
         .context("Failed to delete story")?;
     
     Ok(())
+}
+
+/// Create a new episode
+pub fn create_episode(conn: &Connection, episode: &Episode) -> Result<()> {
+    let status_str = match episode.status {
+        EpisodeStatus::Draft => "Draft",
+        EpisodeStatus::InProgress => "InProgress",
+        EpisodeStatus::Review => "Review",
+        EpisodeStatus::Published => "Published",
+    };
+    
+    conn.execute(
+        "INSERT INTO episodes (story_name, episode_number, title, status, word_count, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![
+            episode.story_name,
+            episode.episode_number,
+            episode.title,
+            status_str,
+            episode.word_count,
+            episode.created_at.to_rfc3339(),
+            episode.updated_at.to_rfc3339()
+        ],
+    ).context("Failed to insert episode")?;
+    
+    Ok(())
+}
+
+/// List episodes for a story
+pub fn list_episodes(conn: &Connection, story_name: &str) -> Result<Vec<Episode>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, story_name, episode_number, title, status, word_count, created_at, updated_at
+         FROM episodes WHERE story_name = ?1 ORDER BY episode_number ASC"
+    )?;
+    
+    let episode_iter = stmt.query_map([story_name], |row| {
+        let status_str: String = row.get(4)?;
+        let created_at_str: String = row.get(6)?;
+        let updated_at_str: String = row.get(7)?;
+        
+        let status = match status_str.as_str() {
+            "Draft" => EpisodeStatus::Draft,
+            "InProgress" => EpisodeStatus::InProgress,
+            "Review" => EpisodeStatus::Review,
+            "Published" => EpisodeStatus::Published,
+            _ => EpisodeStatus::Draft,
+        };
+        
+        let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+            .map_err(|e| rusqlite::Error::InvalidColumnType(6, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .with_timezone(&chrono::Utc);
+            
+        let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
+            .map_err(|e| rusqlite::Error::InvalidColumnType(7, "updated_at".to_string(), rusqlite::types::Type::Text))?
+            .with_timezone(&chrono::Utc);
+        
+        Ok(Episode {
+            id: row.get(0)?,
+            story_name: row.get(1)?,
+            episode_number: row.get(2)?,
+            title: row.get(3)?,
+            status,
+            word_count: row.get(5)?,
+            created_at,
+            updated_at,
+        })
+    })?;
+    
+    let mut episodes = Vec::new();
+    for episode in episode_iter {
+        episodes.push(episode?);
+    }
+    
+    Ok(episodes)
+}
+
+/// Get a specific episode
+pub fn get_episode(conn: &Connection, story_name: &str, episode_number: i32) -> Result<Option<Episode>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, story_name, episode_number, title, status, word_count, created_at, updated_at
+         FROM episodes WHERE story_name = ?1 AND episode_number = ?2"
+    )?;
+    
+    let mut rows = stmt.query_map([story_name, &episode_number.to_string()], |row| {
+        let status_str: String = row.get(4)?;
+        let created_at_str: String = row.get(6)?;
+        let updated_at_str: String = row.get(7)?;
+        
+        let status = match status_str.as_str() {
+            "Draft" => EpisodeStatus::Draft,
+            "InProgress" => EpisodeStatus::InProgress,
+            "Review" => EpisodeStatus::Review,
+            "Published" => EpisodeStatus::Published,
+            _ => EpisodeStatus::Draft,
+        };
+        
+        let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
+            .map_err(|e| rusqlite::Error::InvalidColumnType(6, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .with_timezone(&chrono::Utc);
+            
+        let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
+            .map_err(|e| rusqlite::Error::InvalidColumnType(7, "updated_at".to_string(), rusqlite::types::Type::Text))?
+            .with_timezone(&chrono::Utc);
+        
+        Ok(Episode {
+            id: row.get(0)?,
+            story_name: row.get(1)?,
+            episode_number: row.get(2)?,
+            title: row.get(3)?,
+            status,
+            word_count: row.get(5)?,
+            created_at,
+            updated_at,
+        })
+    })?;
+    
+    match rows.next() {
+        Some(episode) => Ok(Some(episode?)),
+        None => Ok(None),
+    }
+}
+
+/// Delete an episode
+pub fn delete_episode(conn: &Connection, story_name: &str, episode_number: i32) -> Result<()> {
+    conn.execute(
+        "DELETE FROM episodes WHERE story_name = ?1 AND episode_number = ?2",
+        params![story_name, episode_number]
+    ).context("Failed to delete episode")?;
+    
+    Ok(())
+}
+
+/// Get the next episode number for a story
+pub fn get_next_episode_number(conn: &Connection, story_name: &str) -> Result<i32> {
+    let mut stmt = conn.prepare(
+        "SELECT COALESCE(MAX(episode_number), 0) + 1 FROM episodes WHERE story_name = ?1"
+    )?;
+    
+    let next_number: i32 = stmt.query_row([story_name], |row| row.get(0))?;
+    Ok(next_number)
 }

@@ -15,6 +15,9 @@ pub enum WorldCommands {
         /// Clone from Git repository instead of creating local
         #[arg(long)]
         from_git: Option<String>,
+        /// Initialize in non-empty directory (only creates missing files)
+        #[arg(long)]
+        merge: bool,
     },
     
     /// Show project details

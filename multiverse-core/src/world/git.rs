@@ -2,7 +2,6 @@ use super::config::WorldConfig;
 use anyhow::{Result, Context, bail};
 use git2::{Repository, Signature, Time, RemoteCallbacks, FetchOptions, PushOptions, Cred};
 use std::path::{Path, PathBuf};
-use std::fs;
 
 // Git status information for a world repository
 #[derive(Debug)]
@@ -203,9 +202,10 @@ impl WorldGitRepo {
             bail!("World directory does not exist: {}", world_path.display());
         }
         
-        let world_meta_path = world_path.join(".world.json");
+        // A che serve? non esiste piu' il .world...
+        let world_meta_path = world_path.join(".multiverse/");
         if !world_meta_path.exists() {
-            bail!("Not a valid world directory (missing .world.json): {}", world_path.display());
+            bail!("Not a valid world directory (missing config dir): {}", world_path.display());
         }
         
         Ok(Self {
@@ -237,7 +237,7 @@ impl WorldGitRepo {
             .to_string();
         
         clone_world_repo(repo_url, target_path)
-            .with_context(|| format!("Failed to clone world '{}' from {}", world_name, repo_url))?;
+            .with_context(|| format!("Failed to clone world '{world_name}' from {repo_url}"))?;
         
         Ok(Self {
             world_path: target_path.to_path_buf(),
@@ -335,14 +335,14 @@ impl GitStatusPrinter {
         if !status.modified_files.is_empty() {
             println!("   📝 Modified files ({}):", status.modified_files.len());
             for file in &status.modified_files {
-                println!("      M  {}", file);
+                println!("      M  {file}");
             }
         }
         
         if !status.untracked_files.is_empty() {
             println!("   ➕ Untracked files ({}):", status.untracked_files.len());
             for file in &status.untracked_files {
-                println!("      ?  {}", file);
+                println!("      ?  {file}");
             }
         }
     }
