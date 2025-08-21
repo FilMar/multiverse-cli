@@ -1,0 +1,32 @@
+[package]
+name = "multiverse-dashboard"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Web dashboard for Multiverse CLI - interactive narrative management"
+keywords = ["web", "dashboard", "htmx", "narrative"]
+categories = ["web-programming", "command-line-utilities"]
+
+[dependencies]
+# Core dependency
+multiverse-core = { path = "../multiverse-core" }
+
+# Workspace shared dependencies
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+
+# Web framework dependencies
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+askama = { workspace = true }
+
+# Additional dashboard dependencies
+mime = "0.3"
+hyper = { version = "1.7", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+futures-util = "0.3"

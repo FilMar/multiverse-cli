@@ -1,0 +1,71 @@
+# --- Rust / Cargo ---
+/target/
+**/target/
+**/*.rs.bk
+# Non ignorare Cargo.lock in un'app/workspace:
+#!Cargo.lock
+
+# Profiler / coverage
+*.profraw
+coverage/
+llvm-profdata/
+
+# --- Database locali (SQLite) ---
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# --- Frontend / build tools (Tailwind, HTMX, bundlers opzionali) ---
+node_modules/
+.pnpm-store/
+.pnp.cjs
+.pnp.loader.mjs
+# cache vari strumenti
+.parcel-cache/
+.turbo/
+.next/
+.nuxt/
+.svelte-kit/
+vite.svg
+# output comuni di build (adatta alle tue cartelle reali)
+dist/
+build/
+public/build/
+public/assets/
+static/build/
+static/assets/
+assets/build/
+
+# Se versioni i CSS generati da Tailwind, commenta le righe sopra
+# e mantieni in repo solo i sorgenti (es. input.css)
+
+# --- Log / temp ---
+*.log
+logs/
+tmp/
+temp/
+
+# --- Env / segreti ---
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# --- Editor / OS junk ---
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- Direnv / tool locali ---
+.envrc
+.direnv/
+
+# --- Docker / compose override locali (se li usi) ---
+docker-compose.override.yml
