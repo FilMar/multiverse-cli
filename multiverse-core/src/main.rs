@@ -1,18 +1,20 @@
 mod cli;
 mod database;
 mod world;
+mod story;
 
 use clap::Parser;
 use anyhow::Result;
-use cli::{Cli, Commands, DiaryCommands};
+use cli::{Cli, Commands};
 use world::{handle_world_command, WorldConfig};
+use story::handle_story_command;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     
     match cli.command {
         Commands::World { command } => handle_world_command(command),
-        Commands::Diary { command } => todo!(),
+        Commands::Story { command } => handle_story_command(command),
         Commands::Info => handle_info(),
     }
 }
@@ -37,3 +39,4 @@ fn handle_info() -> Result<()> {
     
     Ok(())
 }
+

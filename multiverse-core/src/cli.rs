@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::world::WorldCommands;
+use crate::{story::StoryCommands, world::WorldCommands};
 
 #[derive(Parser)]
 #[command(name = "multiverse")]
@@ -18,10 +18,10 @@ pub enum Commands {
         command: WorldCommands,
     },
     
-    /// Manage diary series (requires being in a multiverse project)
-    Diary {
+    /// Manage stories (requires being in a multiverse project)
+    Story {
         #[command(subcommand)]
-        command: DiaryCommands,
+        command: StoryCommands,
     },
     
     /// Show project information
@@ -29,17 +29,3 @@ pub enum Commands {
 }
 
 
-#[derive(Subcommand)]
-pub enum DiaryCommands {
-    /// Create a new diary series
-    Create {
-        /// Diary series name
-        name: String,
-        /// Narrator name
-        #[arg(long)]
-        narrator: String,
-    },
-    
-    /// List diary series in current world
-    List,
-}

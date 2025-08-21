@@ -55,10 +55,10 @@ fn handle_init(name: String, description: Option<String>, aesthetic: Option<Stri
         fs::create_dir_all(&multiverse_dir)
             .context("Failed to create .multiverse directory")?;
         
-        // Create series directory
-        let series_dir = current_dir.join("series");
-        fs::create_dir_all(&series_dir)
-            .context("Failed to create series directory")?;
+        // Create stories directory
+        let stories_dir = current_dir.join("stories");
+        fs::create_dir_all(&stories_dir)
+            .context("Failed to create stories directory")?;
         
         // Create configuration
         let mut config = WorldConfig::new(name.clone(), description.clone());
@@ -225,131 +225,14 @@ fn handle_config(set: Option<String>, value: Option<String>) -> Result<()> {
 }
 
 fn create_fundamental_files(world_path: &Path, name: &str, description: Option<&str>) -> Result<()> {
-    // Create 00_ESSENTIAL.md
-    let essential_content = format!(r#"# {name} - Essentials
-
-## Overview
-{description}
-
-## Core Concepts
-<!-- The 80% of the world that matters most -->
-
-### Geography
-<!-- Key locations and their significance -->
-
-### Cultures & Societies
-<!-- Major civilizations, their values, and interactions -->
-
-### Power Structures
-<!-- Governments, organizations, hierarchies -->
-
-### Magic/Technology System
-<!-- How the extraordinary works in this world -->
-
-### Conflicts & Tensions
-<!-- Core conflicts that drive stories -->
-
-## Key Characters
-<!-- The most important figures everyone should know -->
-
-## Important Rules
-<!-- What makes this world unique and consistent -->
-
-## Themes
-<!-- The big ideas this world explores -->
-"#, 
-        name = name,
-        description = description.unwrap_or("A rich narrative universe waiting to be explored.")
-    );
+    // Create empty fundamental files
+    let files = ["00_ESSENTIAL.md", "01_HISTORY.md", "README.md"];
     
-    let essential_path = world_path.join("00_ESSENTIAL.md");
-    fs::write(&essential_path, essential_content)
-        .with_context(|| format!("Failed to create {}", essential_path.display()))?;
-    
-    // Create 01_HISTORY.md
-    let history_content = format!(r#"# {name} - Historical Timeline
-
-## Chronological Events
-
-### Ancient Era
-<!-- Foundational events, creation myths, early civilizations -->
-
-### Classical Period
-<!-- Major civilizations at their peak, defining conflicts -->
-
-### Recent History
-<!-- Events that directly impact current stories -->
-
-### Current Era
-<!-- The "present day" of your narratives -->
-
-## Important Dates
-<!-- Key dates that characters would know -->
-
-## Historical Figures
-<!-- People who shaped this world's history -->
-
-## Consequences
-<!-- How past events influence the present -->
-
----
-*This timeline should include ALL significant events across all stories in chronological order*
-"#, name = name);
-    
-    let history_path = world_path.join("01_HISTORY.md");
-    fs::write(&history_path, history_content)
-        .with_context(|| format!("Failed to create {}", history_path.display()))?;
-    
-    // Create README.md
-    let readme_content = format!(r#"# {name}
-
-{description}
-
-## Getting Started
-
-This multiverse project consists of several key files and directories:
-
-### Core Documentation
-- **00_ESSENTIAL.md** - The 80% of world information you need to know
-- **01_HISTORY.md** - Complete chronological timeline of all events
-- **series/** - All narrative series (diaries and extras)
-
-### Lore Files
-Individual lore files are named with recognizable patterns:
-- `luogo_<region>_<location>_<details>.md` - Locations
-- `personaggio_<name>_<details>.md` - Characters  
-- `organizzazione_<name>_<details>.md` - Organizations
-- `evento_<name>_<date>.md` - Specific events
-- `cultura_<name>_<details>.md` - Cultural information
-
-### Project Files
-- `.multiverse/config.toml` - Project configuration and world metadata
-- `.multiverse/world.db` - Operational data (SQLite database)
-
-## Contributing
-
-When adding content to this world:
-
-1. **Check 00_ESSENTIAL.md first** - Does your addition fit the established world?
-2. **Update 01_HISTORY.md** - Add any historical events in chronological order
-3. **Use consistent naming** - Follow the established patterns for lore files
-4. **Cross-reference** - Link related concepts between files
-
-## Series in this World
-
-<!-- List of narrative series set in this world -->
-
----
-
-*Managed with [Multiverse CLI](https://github.com/your-repo/multiverse-cli)*
-"#, 
-        name = name,
-        description = description.unwrap_or("A rich narrative universe with complex histories and interconnected stories.")
-    );
-    
-    let readme_path = world_path.join("README.md");
-    fs::write(&readme_path, readme_content)
-        .with_context(|| format!("Failed to create {}", readme_path.display()))?;
+    for file_name in &files {
+        let file_path = world_path.join(file_name);
+        fs::write(&file_path, "")
+            .with_context(|| format!("Failed to create {}", file_path.display()))?;
+    }
     
     Ok(())
 }

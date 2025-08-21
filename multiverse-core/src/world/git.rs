@@ -1,4 +1,4 @@
-use crate::config::Config;
+use super::config::WorldConfig;
 use anyhow::{Result, Context, bail};
 use git2::{Repository, Signature, Time, RemoteCallbacks, FetchOptions, PushOptions, Cred};
 use std::path::{Path, PathBuf};
@@ -277,128 +277,40 @@ pub struct WorkspaceGitManager {
 
 impl WorkspaceGitManager {
     pub fn new() -> Result<Self> {
-        let (config, _) = Config::load_or_default();
-        let workspace_path = config.workspace.path;
+        // For git-style approach, we work with the current world root
+        let world_root = WorldConfig::get_world_root()
+            .context("Not in a multiverse project directory")?;
         
-        if !workspace_path.exists() {
-            bail!("Workspace directory does not exist: {}", workspace_path.display());
-        }
-        
-        Ok(Self { workspace_path })
+        Ok(Self { workspace_path: world_root })
     }
     
-    /// Get all world repositories in the workspace
-    pub fn get_world_repos(&self) -> Result<Vec<WorldGitRepo>> {
-        let mut worlds = Vec::new();
-        
-        for entry in fs::read_dir(&self.workspace_path)? {
-            let entry = entry?;
-            let path = entry.path();
-            
-            if path.is_dir() {
-                let world_meta_path = path.join(".world.json");
-                if world_meta_path.exists() {
-                    match WorldGitRepo::new(&path) {
-                        Ok(world) => worlds.push(world),
-                        Err(_) => continue, // Skip invalid worlds
-                    }
-                }
-            }
-        }
-        
-        Ok(worlds)
+    /// Get current world repository
+    pub fn get_current_world_repo(&self) -> Result<WorldGitRepo> {
+        WorldGitRepo::new(&self.workspace_path)
     }
     
-    /// Get a specific world repository
-    pub fn get_world_repo(&self, name: &str) -> Result<WorldGitRepo> {
-        let world_path = self.workspace_path.join(name);
-        WorldGitRepo::new(world_path)
+    /// Pull updates for current world
+    pub fn pull(&self) -> Result<()> {
+        let world = self.get_current_world_repo()?;
+        world.pull()
     }
     
-    /// Pull updates for a specific world
-    pub fn pull_world(&self, name: &str) -> Result<()> {
-        println!("📥 Pulling updates for world '{}'...", name);
-        
-        let world = self.get_world_repo(name)?;
-        world.pull()?;
-        
-        println!("✅ World '{}' updated!", name);
-        Ok(())
+    /// Push changes for current world
+    pub fn push(&self) -> Result<()> {
+        let world = self.get_current_world_repo()?;
+        world.push()
     }
     
-    /// Pull updates for all worlds
-    pub fn pull_all(&self) -> Result<()> {
-        println!("📥 Pulling updates for all worlds...");
-        
-        let worlds = self.get_world_repos()?;
-        let mut updated_count = 0;
-        let mut error_count = 0;
-        
-        for world in worlds {
-            match world.pull() {
-                Ok(_) => {
-                    println!("   ✅ {}", world.name());
-                    updated_count += 1;
-                }
-                Err(e) => {
-                    println!("   ❌ {} - {}", world.name(), e);
-                    error_count += 1;
-                }
-            }
-        }
-        
-        println!("\n📊 Pull summary: {} updated, {} errors", updated_count, error_count);
-        Ok(())
-    }
-    
-    /// Push changes for a specific world
-    pub fn push_world(&self, name: &str) -> Result<()> {
-        println!("📤 Pushing changes for world '{}'...", name);
-        
-        let world = self.get_world_repo(name)?;
-        world.push()?;
-        
-        println!("✅ World '{}' pushed!", name);
-        Ok(())
-    }
-    
-    /// Get status for a specific world
-    pub fn status_world(&self, name: &str) -> Result<()> {
-        println!("📊 Git status for world '{}':", name);
-        
-        let world = self.get_world_repo(name)?;
+    /// Get status for current world
+    pub fn status(&self) -> Result<()> {
+        let world = self.get_current_world_repo()?;
         match world.status() {
             Ok(status) => {
                 GitStatusPrinter::print_detailed(&status);
+                Ok(())
             }
-            Err(e) => println!("   ❌ Error: {}", e),
+            Err(e) => Err(e),
         }
-        
-        Ok(())
-    }
-    
-    /// Get status for all worlds
-    pub fn status_all(&self) -> Result<()> {
-        println!("📊 Git status for all worlds:");
-        
-        let worlds = self.get_world_repos()?;
-        
-        for world in worlds {
-            match world.status() {
-                Ok(status) => {
-                    print!("\n   {}: ", world.name());
-                    if world.is_clean_and_synced().unwrap_or(false) {
-                        println!("✅ Clean");
-                    } else {
-                        println!();
-                        GitStatusPrinter::print_compact(&status);
-                    }
-                }
-                Err(e) => println!("\n   {}: ❌ Error - {}", world.name(), e),
-            }
-        }
-        
-        Ok(())
     }
 }
 

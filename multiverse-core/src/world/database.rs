@@ -1,4 +1,5 @@
-use crate::database::{init_database};
+use crate::database::{init_database, get_connection};
+use crate::story::database::init_story_tables;
 use anyhow::Result;
 use std::path::Path;
 
@@ -7,10 +8,10 @@ pub fn init_world_database(db_path: &Path) -> Result<()> {
     // Initialize basic database
     init_database(db_path)?;
     
-    let conn = crate::database::get_connection(db_path)?;
+    let conn = get_connection(db_path)?;
     
-    // For now, just ensure the database is properly initialized
-    // Other modules (series, episodes, characters, etc.) will add their own tables
+    // Initialize story tables
+    init_story_tables(&conn)?;
     
     Ok(())
 }
