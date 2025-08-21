@@ -1,101 +1,96 @@
 use super::cli::WorldCommands;
-use super::models::{WorldMeta, VisualIdentity};
-use super::database::{init_world_database, world_database_exists};
-use super::git::{WorkspaceGitManager, WorldGitRepo};
-use crate::config::Config;
+use super::config::{WorldConfig, WorldMeta, VisualIdentity};
+use super::database::init_world_database;
+use super::git::WorldGitRepo;
 use anyhow::{Result, Context, bail};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::fs;
 
 pub fn handle_world_command(command: WorldCommands) -> Result<()> {
     match command {
-        WorldCommands::Create { name, description, aesthetic, from_git } => {
-            handle_create(name, description, aesthetic, from_git)
+        WorldCommands::Init { name, description, aesthetic, from_git } => {
+            handle_init(name, description, aesthetic, from_git)
         }
-        WorldCommands::List => handle_list(),
-        WorldCommands::Info { name } => handle_info(name),
-        WorldCommands::Pull { name } => handle_pull(name),
-        WorldCommands::Push { name } => handle_push(name),
-        WorldCommands::Status { name } => handle_status(name),
-        WorldCommands::Delete { name, force } => handle_delete(name, force),
+        WorldCommands::Info => handle_info(),
+        WorldCommands::Pull => handle_pull(),
+        WorldCommands::Push => handle_push(),
+        WorldCommands::Status => handle_status(),
+        WorldCommands::Config { set, value } => handle_config(set, value),
     }
 }
 
-fn handle_create(name: String, description: Option<String>, aesthetic: Option<String>, from_git: Option<String>) -> Result<()> {
-    let (config, _) = Config::load_or_default();
-    let world_path = config.workspace.path.join(&name);
+fn handle_init(name: String, description: Option<String>, aesthetic: Option<String>, from_git: Option<String>) -> Result<()> {
+    let current_dir = std::env::current_dir()
+        .context("Failed to get current directory")?;
     
-    // Check if world already exists
-    if world_path.exists() {
-        bail!("World '{}' already exists at {}", name, world_path.display());
+    // Check if already in a multiverse project
+    if current_dir.join(".multiverse").exists() {
+        bail!("Already in a multiverse project. Use 'multiverse info' to see details.");
     }
     
     if let Some(repo_url) = from_git {
         // Clone from Git repository
-        println!("🌍 Cloning world '{}' from {}...", name, repo_url);
+        println!("🌍 Cloning multiverse project from {}...", repo_url);
         
-        WorldGitRepo::clone_from(&repo_url, &world_path)?;
+        WorldGitRepo::clone_from(&repo_url, &current_dir)?;
         
-        println!("✅ World '{}' cloned from Git!", name);
-        println!("   Location: {}", world_path.display());
+        println!("✅ Project cloned from Git!");
+        println!("   Location: {}", current_dir.display());
         
         // Verify database exists or initialize it
-        let db_path = world_path.join(".world.db");
-        if !world_database_exists(&db_path) {
-            println!("   Initializing database...");
-            init_world_database(&db_path)
-                .context("Failed to initialize world database")?;
-        }
-        
-    } else {
-        // Create local world
-        println!("🌍 Creating world '{}'...", name);
-        
-        // Create world directory
-        fs::create_dir_all(&world_path)
-            .with_context(|| format!("Failed to create world directory {}", world_path.display()))?;
-        
-        // Create subdirectories
-        let subdirs = ["series"];
-        for subdir in &subdirs {
-            let subdir_path = world_path.join(subdir);
-            fs::create_dir_all(&subdir_path)
-                .with_context(|| format!("Failed to create directory {}", subdir_path.display()))?;
-        }
-        
-        // Create world metadata
-        let mut world_meta = WorldMeta::new(name.clone(), description.clone());
-        
-        // Apply aesthetic if provided
-        if let Some(aesthetic) = aesthetic {
-            if let Some(ref mut visual_identity) = world_meta.visual_identity {
-                visual_identity.estetica = aesthetic;
-                visual_identity.descrizione = format!("Mondo con estetica {}", visual_identity.estetica);
+        if let Ok(db_path) = WorldConfig::get_database_path() {
+            if !db_path.exists() {
+                println!("   Initializing database...");
+                init_world_database(&db_path)
+                    .context("Failed to initialize world database")?;
             }
         }
         
-        // Save world metadata to .world.json
-        world_meta.save(&world_path)
-            .context("Failed to save world metadata")?;
+    } else {
+        // Create local project
+        println!("🌍 Initializing multiverse project '{}'...", name);
+        
+        // Create .multiverse directory
+        let multiverse_dir = current_dir.join(".multiverse");
+        fs::create_dir_all(&multiverse_dir)
+            .context("Failed to create .multiverse directory")?;
+        
+        // Create series directory
+        let series_dir = current_dir.join("series");
+        fs::create_dir_all(&series_dir)
+            .context("Failed to create series directory")?;
+        
+        // Create configuration
+        let mut config = WorldConfig::new(name.clone(), description.clone());
+        
+        // Apply aesthetic if provided
+        if let Some(aesthetic) = aesthetic {
+            config.world.visual_identity.estetica = aesthetic;
+            config.world.visual_identity.descrizione = format!("Mondo con estetica {}", config.world.visual_identity.estetica);
+        }
+        
+        // Save configuration to .multiverse/config.toml
+        config.save(&current_dir)
+            .context("Failed to save configuration")?;
         
         // Create fundamental files
-        create_fundamental_files(&world_path, &name, description.as_deref())
+        create_fundamental_files(&current_dir, &name, description.as_deref())
             .context("Failed to create fundamental files")?;
         
-        // Initialize world database
-        let db_path = world_path.join(".world.db");
+        // Initialize database
+        let db_path = multiverse_dir.join("world.db");
         init_world_database(&db_path)
             .context("Failed to initialize world database")?;
         
         // Initialize Git repository
-        let world_repo = WorldGitRepo::new(&world_path)?;
+        let world_repo = WorldGitRepo::new(&current_dir)?;
         world_repo.init()?;
         
-        println!("✅ World '{}' created!", name);
-        println!("   Location: {}", world_path.display());
+        println!("✅ Multiverse project '{}' initialized!", name);
+        println!("   Location: {}", current_dir.display());
         println!("   Core files: 00_ESSENTIAL.md, 01_HISTORY.md, README.md");
-        println!("   Metadata: {}/.world.json", world_path.display());
-        println!("   Database: {}/.world.db", world_path.display());
+        println!("   Config: .multiverse/config.toml");
+        println!("   Database: .multiverse/world.db");
         println!("   Git: Repository initialized");
         
         if let Some(desc) = &description {
@@ -106,154 +101,128 @@ fn handle_create(name: String, description: Option<String>, aesthetic: Option<St
     Ok(())
 }
 
-fn handle_list() -> Result<()> {
-    println!("🌍 Worlds in workspace:");
+fn handle_info() -> Result<()> {
+    let config = WorldConfig::load()
+        .context("Not in a multiverse project directory. Run 'multiverse init <name>' to create one.")?;
     
-    // Get workspace path
-    let (config, _) = Config::load_or_default();
-    let workspace_path = &config.workspace.path;
+    let world_root = WorldConfig::get_world_root()?;
     
-    if !workspace_path.exists() {
-        println!("   Workspace directory does not exist: {}", workspace_path.display());
-        return Ok(());
-    }
+    println!("🌍 Multiverse Project: {}", config.world.name);
+    println!("   Location: {}", world_root.display());
     
-    // Scan for world directories
-    let mut worlds = Vec::new();
-    for entry in fs::read_dir(workspace_path)? {
-        let entry = entry?;
-        let path = entry.path();
-        
-        if path.is_dir() {
-            let world_meta_path = path.join(".world.json");
-            if world_meta_path.exists() {
-                match WorldMeta::load(&path) {
-                    Ok(meta) => worlds.push((path, meta)),
-                    Err(_) => {
-                        println!("   ⚠️  {}: invalid .world.json", path.file_name().unwrap().to_string_lossy());
-                    }
-                }
-            }
-        }
-    }
-    
-    if worlds.is_empty() {
-        println!("   (no worlds found - use 'multiverse world create <name>' to create one)");
-    } else {
-        for (world_path, meta) in worlds {
-            let world_name = world_path.file_name().unwrap().to_string_lossy();
-            let db_path = world_path.join(".world.db");
-            let db_status = if world_database_exists(&db_path) { "✅" } else { "❌" };
-            
-            println!("   {} {} {}", db_status, world_name, 
-                meta.description.as_deref().unwrap_or("(no description)"));
-            
-            if let Some(visual) = &meta.visual_identity {
-                println!("      Aesthetic: {} - {}", visual.estetica, visual.descrizione);
-            }
-        }
-    }
-    
-    Ok(())
-}
-
-fn handle_info(name: String) -> Result<()> {
-    println!("🌍 World: {}", name);
-    
-    // Get workspace path and world path
-    let (config, _) = Config::load_or_default();
-    let world_path = config.workspace.path.join(&name);
-    
-    if !world_path.exists() {
-        bail!("World '{}' does not exist", name);
-    }
-    
-    // Load world metadata
-    let world_meta = WorldMeta::load(&world_path)
-        .context("Failed to load world metadata")?;
-    
-    println!("   Location: {}", world_path.display());
-    println!("   Name: {}", world_meta.name);
-    
-    if let Some(description) = &world_meta.description {
+    if let Some(description) = &config.world.description {
         println!("   Description: {}", description);
     }
     
-    if let Some(visual) = &world_meta.visual_identity {
-        println!("   Aesthetic: {} - {}", visual.estetica, visual.descrizione);
-    }
+    println!("   Aesthetic: {} - {}", 
+        config.world.visual_identity.estetica, 
+        config.world.visual_identity.descrizione);
     
-    if let Some(config) = &world_meta.global_config {
-        println!("   Numbering format: {}", config.formato_numerazione);
-        println!("   Default template: {}", config.template_default);
-    }
+    println!("   Numbering format: {}", config.world.global_config.formato_numerazione);
+    println!("   Default template: {}", config.world.global_config.template_default);
     
     // Check database status
-    let db_path = world_path.join(".world.db");
-    if world_database_exists(&db_path) {
-        println!("   Database: ✅ Valid");
-        
-        // TODO: Query database for stats
-        println!("   Series: (to be implemented)");
-        println!("   Episodes: (to be implemented)");
-    } else {
-        println!("   Database: ❌ Missing or invalid");
+    if let Ok(db_path) = WorldConfig::get_database_path() {
+        if db_path.exists() {
+            println!("   Database: ✅ Valid");
+            // TODO: Query database for stats
+            println!("   Series: (to be implemented)");
+            println!("   Episodes: (to be implemented)");
+        } else {
+            println!("   Database: ❌ Missing");
+        }
     }
     
     Ok(())
 }
 
-fn handle_delete(name: String, force: bool) -> Result<()> {
-    // Get workspace path and world path
-    let (config, _) = Config::load_or_default();
-    let world_path = config.workspace.path.join(&name);
+fn handle_pull() -> Result<()> {
+    let world_root = WorldConfig::get_world_root()
+        .context("Not in a multiverse project directory")?;
     
-    if !world_path.exists() {
-        bail!("World '{}' does not exist", name);
-    }
+    println!("📥 Pulling updates...");
     
-    if !force {
-        println!("⚠️  Are you sure you want to delete world '{}'?", name);
-        println!("   This will permanently delete: {}", world_path.display());
-        println!("   Use --force to skip this confirmation");
-        return Ok(());
-    }
+    let world_repo = WorldGitRepo::new(&world_root)?;
+    world_repo.pull()?;
     
-    println!("🗑️  Deleting world '{}'...", name);
-    
-    // Delete world directory and all contents
-    fs::remove_dir_all(&world_path)
-        .with_context(|| format!("Failed to delete world directory {}", world_path.display()))?;
-    
-    println!("✅ World '{}' deleted!", name);
+    println!("✅ Project updated!");
     
     Ok(())
 }
 
-fn handle_pull(name: Option<String>) -> Result<()> {
-    let workspace_manager = WorkspaceGitManager::new()?;
+fn handle_push() -> Result<()> {
+    let world_root = WorldConfig::get_world_root()
+        .context("Not in a multiverse project directory")?;
     
-    match name {
-        Some(world_name) => workspace_manager.pull_world(&world_name),
-        None => workspace_manager.pull_all(),
-    }
-}
-
-fn handle_push(name: String) -> Result<()> {
-    let workspace_manager = WorkspaceGitManager::new()?;
-    workspace_manager.push_world(&name)
-}
-
-fn handle_status(name: Option<String>) -> Result<()> {
-    let workspace_manager = WorkspaceGitManager::new()?;
+    println!("📤 Pushing changes...");
     
-    match name {
-        Some(world_name) => workspace_manager.status_world(&world_name),
-        None => workspace_manager.status_all(),
-    }
+    let world_repo = WorldGitRepo::new(&world_root)?;
+    world_repo.push()?;
+    
+    println!("✅ Changes pushed!");
+    
+    Ok(())
 }
 
-// Git status printing is now handled by GitStatusPrinter in git_utility.rs
+fn handle_status() -> Result<()> {
+    let world_root = WorldConfig::get_world_root()
+        .context("Not in a multiverse project directory")?;
+    
+    let config = WorldConfig::load()?;
+    
+    println!("📊 Git status for project '{}':", config.world.name);
+    
+    let world_repo = WorldGitRepo::new(&world_root)?;
+    match world_repo.status() {
+        Ok(status) => {
+            use super::git::GitStatusPrinter;
+            GitStatusPrinter::print_detailed(&status);
+        }
+        Err(e) => println!("   ❌ Error: {}", e),
+    }
+    
+    Ok(())
+}
+
+fn handle_config(set: Option<String>, value: Option<String>) -> Result<()> {
+    match (set, value) {
+        (Some(key), Some(val)) => {
+            let mut config = WorldConfig::load()
+                .context("Not in a multiverse project directory")?;
+            let world_root = WorldConfig::get_world_root()?;
+            println!("trying to configure: {} = {}", key, val);
+            match key.as_str() {
+                "world.name" => config.world.name = val,
+                "world.description" => config.world.description = Some(val),
+                "world.visual_identity.estetica" => config.world.visual_identity.estetica = val,
+                "world.visual_identity.descrizione" => config.world.visual_identity.descrizione = val,
+                "world.global_config.formato_numerazione" => config.world.global_config.formato_numerazione = val,
+                "world.global_config.template_default" => config.world.global_config.template_default = val,
+                _ => bail!("Unknown configuration key: {}", key),
+            }
+            config.save(&world_root)?;
+            println!("✅ Configuration updated!");
+        }
+        (None, None) => {
+            // Show current configuration
+            let config = WorldConfig::load()
+                .context("Not in a multiverse project directory")?;
+            
+            println!("📋 Current configuration:");
+            println!("   world.name = \"{}\"", config.world.name);
+            if let Some(desc) = &config.world.description {
+                println!("   world.description = \"{}\"", desc);
+            }
+            println!("   world.visual_identity.estetica = \"{}\"", config.world.visual_identity.estetica);
+            println!("   world.visual_identity.descrizione = \"{}\"", config.world.visual_identity.descrizione);
+            println!("   world.global_config.formato_numerazione = \"{}\"", config.world.global_config.formato_numerazione);
+            println!("   world.global_config.template_default = \"{}\"", config.world.global_config.template_default);
+        }
+        _ => bail!("Both --set and --value must be provided together"),
+    }
+    
+    Ok(())
+}
 
 fn create_fundamental_files(world_path: &Path, name: &str, description: Option<&str>) -> Result<()> {
     // Create 00_ESSENTIAL.md
@@ -338,7 +307,7 @@ fn create_fundamental_files(world_path: &Path, name: &str, description: Option<&
 
 ## Getting Started
 
-This world consists of several key files and directories:
+This multiverse project consists of several key files and directories:
 
 ### Core Documentation
 - **00_ESSENTIAL.md** - The 80% of world information you need to know
@@ -353,9 +322,9 @@ Individual lore files are named with recognizable patterns:
 - `evento_<name>_<date>.md` - Specific events
 - `cultura_<name>_<details>.md` - Cultural information
 
-### Database
-- `.world.db` - Operational data (SQLite database)
-- `.world.json` - World metadata
+### Project Files
+- `.multiverse/config.toml` - Project configuration and world metadata
+- `.multiverse/world.db` - Operational data (SQLite database)
 
 ## Contributing
 

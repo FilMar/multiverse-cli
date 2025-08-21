@@ -1,5 +1,4 @@
-use crate::database::{execute_sql, init_database};
-use rusqlite::Connection;
+use crate::database::{init_database};
 use anyhow::Result;
 use std::path::Path;
 

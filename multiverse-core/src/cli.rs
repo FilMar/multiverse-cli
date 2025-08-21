@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand};
-use crate::config::ConfigCommands;
 use crate::world::WorldCommands;
 
 #[derive(Parser)]
@@ -13,25 +12,19 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Manage configuration
-    Config {
-        #[command(subcommand)]
-        command: ConfigCommands,
-    },
-    
-    /// Manage worlds
+    /// Initialize a new multiverse project or manage world settings
     World {
         #[command(subcommand)]
         command: WorldCommands,
     },
     
-    /// Manage diary series
+    /// Manage diary series (requires being in a multiverse project)
     Diary {
         #[command(subcommand)]
         command: DiaryCommands,
     },
     
-    /// Show workspace information
+    /// Show project information
     Info,
 }
 
@@ -40,21 +33,13 @@ pub enum Commands {
 pub enum DiaryCommands {
     /// Create a new diary series
     Create {
-        /// World name
-        #[arg(long)]
-        world: String,
         /// Diary series name
-        #[arg(long)]
         name: String,
         /// Narrator name
         #[arg(long)]
         narrator: String,
     },
     
-    /// List diary series in a world
-    List {
-        /// World name
-        #[arg(long)]
-        world: String,
-    },
+    /// List diary series in current world
+    List,
 }
