@@ -41,4 +41,14 @@ pub enum WorldCommands {
         #[arg(long)]
         value: Option<String>,
     },
+    
+    /// Import data from SQL scripts
+    Import {
+        /// SQL file or directory to execute
+        #[arg(long, short)]
+        file: Option<String>,
+        /// Execute all SQL files in sql/ directory
+        #[arg(long)]
+        all: bool,
+    },
 }
