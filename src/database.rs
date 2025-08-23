@@ -45,24 +45,3 @@ fn run_initial_migrations(conn: &Connection) -> SqliteResult<()> {
     Ok(())
 }
 
-/// Check if database file exists and is valid
-pub fn database_exists(db_path: &Path) -> bool {
-    if !db_path.exists() {
-        return false;
-    }
-    
-    // Try to open and verify it's a valid SQLite database
-    get_connection(db_path).is_ok()
-}
-
-/// Execute a SQL statement safely
-pub fn execute_sql(conn: &Connection, sql: &str, params: &[&dyn rusqlite::ToSql]) -> Result<usize> {
-    conn.execute(sql, params)
-        .with_context(|| format!("Failed to execute SQL: {sql}"))
-}
-
-/// Prepare a SQL statement safely  
-pub fn prepare_statement<'a>(conn: &'a Connection, sql: &str) -> Result<rusqlite::Statement<'a>> {
-    conn.prepare(sql)
-        .with_context(|| format!("Failed to prepare SQL statement: {sql}"))
-}

@@ -217,11 +217,11 @@ pub fn list_episodes(conn: &Connection, story_name: &str) -> Result<Vec<Episode>
         };
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|e| rusqlite::Error::InvalidColumnType(6, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_| rusqlite::Error::InvalidColumnType(6, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
             
         let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
-            .map_err(|e| rusqlite::Error::InvalidColumnType(7, "updated_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_| rusqlite::Error::InvalidColumnType(7, "updated_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
         
         Ok(Episode {
@@ -265,11 +265,11 @@ pub fn get_episode(conn: &Connection, story_name: &str, episode_number: i32) -> 
         };
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|e| rusqlite::Error::InvalidColumnType(6, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_| rusqlite::Error::InvalidColumnType(6, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
             
         let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
-            .map_err(|e| rusqlite::Error::InvalidColumnType(7, "updated_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_| rusqlite::Error::InvalidColumnType(7, "updated_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
         
         Ok(Episode {

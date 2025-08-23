@@ -1,21 +1,25 @@
-[workspace]
-resolver = "2"
-members = [
-    "multiverse-core",
-    "multiverse-dashboard", 
-    "multiverse"
-]
-
-[workspace.package]
+[package]
+name = "multiverse"
 version = "0.1.0"
 edition = "2021"
 authors = ["Filippo Mariani <filippo.ufficiale@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/user/multiverse-cli"
+description = "Professional tooling for complex narrative universes"
+keywords = ["cli", "narrative", "storytelling", "worldbuilding", "content"]
+categories = ["command-line-utilities", "text-processing"]
 
-[workspace.dependencies]
-# Shared versions across workspace
-tokio = { version = "1.47", features = ["rt", "macros"] }
+[[bin]]
+name = "multiverse"
+path = "src/main.rs"
+
+[lib]
+name = "multiverse"
+path = "src/lib.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.47", features = ["rt", "macros", "process"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
@@ -26,14 +30,6 @@ clap = { version = "4.5", features = ["derive"] }
 
 # Database
 rusqlite = { version = "0.37", features = ["bundled"] }
-
-# Web framework (dashboard only)
-axum = { version = "0.8", features = ["macros"] }
-tower = "0.5"
-tower-http = { version = "0.6", features = ["fs", "cors"] }
-
-# Templating
-askama = "0.14"
 
 # File operations
 walkdir = "2.5"
@@ -48,3 +44,9 @@ toml = "0.9"
 # Terminal UI
 console = "0.16"
 indicatif = "0.18"
+
+# Additional dependencies
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.18", features = ["v4", "serde"] }
+shellexpand = "3.1"
+dirs = "6.0"

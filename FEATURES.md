@@ -193,11 +193,7 @@ numbering_format = "Part %d"
 
 ## ⚠️ Features In Corso di Refactoring
 
-### 🏗️ Flexible Story Schema (In Progress)
-- 🚧 Migrazione da schema rigido a metadata JSON blob
-- 🚧 Story types configurabili tramite config.toml
-- 🚧 Sistema validazione dinamica per required/optional fields
-- 🚧 Rimozione divisione artificiale diary/extra
+Nessuna feature attualmente in refactoring. Il sistema story/episode con schema flessibile è già implementato e funzionante.
 
 ## ❌ Features Non Implementate
 
@@ -222,6 +218,23 @@ numbering_format = "Part %d"
 - ❌ Generazione hashtag e metadati
 - ❌ Comandi `multiverse export`
 
+### 🤖 Claude Collaboration
+- ❌ `multiverse export claude-guide` - Genera CLAUDE.md con istruzioni CLI complete
+- ❌ Guide per creare/modificare sistemi, fazioni, personaggi, luoghi
+- ❌ **Istruzioni story/episode management** - Come creare storie ed episodi
+- ❌ **Spiegazione config.toml** - Story types, required/optional fields, validazione
+- ❌ **Convenzioni naming** `categoria_tipo_nome.md` per file lore
+- ❌ **Regole sincronizzazione** database ↔ file .md sempre allineati  
+- ❌ **Comandi update** per modificare elementi esistenti con sync automatico
+
+### 🗄️ Database Query System
+- ❌ `multiverse query "SELECT ..."` - Query SQL dirette (solo SELECT)
+- ❌ **Output formatting** - table, json, csv per diversi use case
+- ❌ **Performance timing** - `--time` per query optimization
+- ❌ **Query validation** - Solo SELECT consentito per sicurezza
+- ❌ **Local-only security model** - Nessuna preoccupazione SQL injection
+- ❌ **Debug features** - `--explain` per query planning
+
 ### 👥 Characters & Locations
 - ❌ Gestione schede personaggi JSON
 - ❌ Gestione schede luoghi JSON
@@ -229,13 +242,20 @@ numbering_format = "Part %d"
 - ❌ Cross-reference episodi ↔ personaggi/luoghi
 - ❌ Comandi `multiverse character`, `multiverse location`
 
-### 🌐 Dashboard Web
-- ❌ Server web locale (crate `multiverse-dashboard` vuoto)
-- ❌ Interface HTMX + Tailwind
-- ❌ Chat interface per comandi CLI
-- ❌ Output arricchito comandi
-- ❌ Quick actions per stati episodi
-- ❌ Comando `multiverse serve`
+### 🔮 Systems Management
+- ❌ Gestione sistemi del mondo (magia, tecnologia, cosmologia)
+- ❌ Tabella `systems` con regole e interazioni
+- ❌ Sistema di validazione per meccaniche di gioco
+- ❌ Cross-reference con personaggi/episodi che usano sistemi
+- ❌ Comandi `multiverse system create/list/info`
+
+### ⚔️ Factions Management
+- ❌ Gestione fazioni e organizzazioni
+- ❌ Tabella `factions` con gerarchia e relazioni
+- ❌ Sistema di alleanze e conflitti tra fazioni
+- ❌ Cross-reference con personaggi membri/episodi coinvolti
+- ❌ Comandi `multiverse faction create/list/info`
+
 
 ### 📊 Analytics & Publishing
 - ❌ Tracking pubblicazioni per piattaforma
@@ -252,34 +272,35 @@ numbering_format = "Part %d"
 
 ## 🎯 Priorità per Prossimi Sviluppi
 
-### Fase 1: Refactoring Schema (Alto - In Corso)
-1. **Flexible Story Schema** - Metadata JSON blob + story types configurabili
-2. **Database Migration** - Migrazione schema esistente senza perdita dati
-3. **Story Types System** - Validazione dinamica e config.toml integration
-4. **Content Templates** - Template episodi personalizzabili per story type
+### Fase 1: Worldbuilding Foundations (Alto)
+1. **Characters Management** - Schema database + comandi CLI per personaggi
+2. **Locations Management** - Schema database + comandi CLI per luoghi  
+3. **Systems Management** - Schema database + comandi CLI per sistemi (magia/tecnologia)
+4. **Factions Management** - Schema database + comandi CLI per fazioni
+5. **Events Management** - Schema database + comandi CLI per eventi storici
 
-### Fase 2: Content Management (Medio)
-1. **Characters & Locations** - Schema database + file JSON
-2. **Word Count** - Parsing automatico file Markdown
-3. **Publishing Tracking** - Metadati pubblicazione base
+### Fase 2: Content Analysis (Medio)
+1. **Word Count** - Parsing automatico file Markdown
+2. **Cross-references** - Linking automatico personaggi/luoghi in episodi
 
 ### Fase 3: Advanced Features (Basso)
-1. **Lore Validation** - Sistema validazione interattiva
-2. **Timeline Management** - Estrazione ed analisi eventi
-3. **Dashboard Web** - Interfaccia locale HTMX
+1. **Timeline Management** - Estrazione automatica eventi temporali
 
 ### Fase 4: Ecosystem (Futuro)
 1. **Multi-platform Export** - YouTube, Spotify, Instagram
+2. **Claude Collaboration** - CLAUDE.md guide generation e comandi update
+3. **Database Query System** - Raw SQL queries con output formatting avanzato
+4. **Claude-powered Lore Analysis** - Strumenti per analisi consistency via AI
 
 ## 📊 Stato Complessivo
 
-- **Completato**: 75% (World, Story, Episode, Database, Config, Git, CLI, LLM Guide, Stats)
-- **In Refactoring**: 15% (Schema flessibile, Story types configurabili)
-- **Mancante**: 10% (Lore validation, Timeline, Export avanzato, Dashboard)
+- **Completato**: 40% (World, Story, Episode, Database base, Config, Git, CLI)
+- **In Refactoring**: 0% (Schema flessibile già implementato)
+- **Mancante**: 60% (Characters, Locations, Systems, Factions, Events, Timeline, Export, Claude Collaboration, Database Queries, AI-powered Analysis)
 
 Il progetto ha una **base solida e completa** per la gestione di storie ed episodi, con:
 - ✅ **Sistema completo** world/story/episode management
 - ✅ **Onboarding automatico** progetti esistenti tramite LLM guide
 - ✅ **Configurazione flessibile** tramite TOML
 - 🚧 **In evoluzione** verso schema completamente configurabile
-- 📋 **Roadmap chiara** per features avanzate future
+- 📋 **Roadmap chiara** per worldbuilding completo (Characters, Locations, Systems, Factions, Events)
