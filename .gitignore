@@ -9,6 +9,7 @@
 *.profraw
 coverage/
 llvm-profdata/
+world/
 
 # --- Database locali (SQLite) ---
 *.db
@@ -67,5 +68,3 @@ Thumbs.db
 .envrc
 .direnv/
 
-# --- Docker / compose override locali (se li usi) ---
-docker-compose.override.yml

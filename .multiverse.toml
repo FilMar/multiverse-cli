@@ -1,6 +1,0 @@
-[workspace]
-path = "/home/fildev/MEGA/1_projects/md_cli"
-
-[git]
-auto_commit = true
-auto_push = false
