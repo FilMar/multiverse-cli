@@ -2,6 +2,7 @@ mod cli;
 mod database;
 mod world;
 mod story;
+mod templates;
 
 use clap::Parser;
 use anyhow::Result;

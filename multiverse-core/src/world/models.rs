@@ -2,75 +2,13 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use anyhow::{Result, Context};
 
-/// World metadata stored in .world.json
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorldMeta {
-    pub name: String,
-    pub description: Option<String>,
-    pub visual_identity: Option<VisualIdentity>,
-    pub global_config: Option<GlobalConfig>,
-}
+// WorldMeta is now defined in config.rs - import it
+pub use super::config::WorldMeta;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VisualIdentity {
-    pub estetica: String,        // "fantasy", "moderna", "storica", "cyberpunk"
-    pub descrizione: String,     // "Quaderni anticati con inchiostro seppia"
-}
+// These structs are now defined in config.rs - import them
+pub use super::config::{VisualIdentity, GlobalConfig};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GlobalConfig {
-    pub formato_numerazione: String,    // "001", "1", "I"
-    pub template_default: String,       // "diario_personale"
-    pub categorie: CategoryRules,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CategoryRules {
-    pub diari: CategoryConfig,
-    pub extra: CategoryConfig,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CategoryConfig {
-    pub firma_pubblica_default: Option<String>,  // "F.M." per diari, None per extra
-    pub tipi_permessi: Vec<String>,
-}
-
-impl Default for VisualIdentity {
-    fn default() -> Self {
-        Self {
-            estetica: "moderna".to_string(),
-            descrizione: "Interfaccia pulita e minimalista".to_string(),
-        }
-    }
-}
-
-impl Default for GlobalConfig {
-    fn default() -> Self {
-        Self {
-            formato_numerazione: "001".to_string(),
-            template_default: "diario_personale".to_string(),
-            categorie: CategoryRules {
-                diari: CategoryConfig {
-                    firma_pubblica_default: Some("F.M.".to_string()),
-                    tipi_permessi: vec![
-                        "diario_personale".to_string(), 
-                        "log_personale".to_string()
-                    ],
-                },
-                extra: CategoryConfig {
-                    firma_pubblica_default: None,
-                    tipi_permessi: vec![
-                        "lettera".to_string(),
-                        "documento_ufficiale".to_string(),
-                        "trascrizione".to_string(),
-                        "rapporto".to_string(),
-                    ],
-                },
-            },
-        }
-    }
-}
+// Default implementations are now in config.rs
 
 /// Main World struct for managing multiverse projects
 #[derive(Debug)]
@@ -80,37 +18,21 @@ pub struct World {
 }
 
 impl WorldMeta {
-    pub fn new(name: String, description: Option<String>) -> Self {
-        Self {
-            name,
-            description,
-            visual_identity: Some(VisualIdentity::default()),
-            global_config: Some(GlobalConfig::default()),
-        }
-    }
+    // new() method is now in config.rs
     
-    /// Load world metadata from .world.json file
+    /// Load world metadata from config.toml file (DEPRECATED - use WorldConfig::load instead)
     pub fn load(world_path: &Path) -> Result<Self> {
-        let meta_path = world_path.join(".multiverse/config.toml");
-        let content = std::fs::read_to_string(&meta_path)
-            .with_context(|| format!("Failed to read {}", meta_path.display()))?;
-        
-        let meta: WorldMeta = serde_json::from_str(&content)
-            .with_context(|| format!("Failed to parse {}", meta_path.display()))?;
-        
-        Ok(meta)
+        let config = super::config::WorldConfig::load()?;
+        Ok(config.world)
     }
     
-    /// Save world metadata to .world.json file
+    /// Save world metadata to config.toml file (DEPRECATED - use WorldConfig::save instead)
     pub fn save(&self, world_path: &Path) -> Result<()> {
-        let meta_path = world_path.join(".multiverse/config.toml");
-        let content = serde_json::to_string_pretty(self)
-            .context("Failed to serialize world metadata")?;
+        let mut config = super::config::WorldConfig::load()
+            .unwrap_or_else(|_| super::config::WorldConfig::new(self.name.clone(), self.description.clone()));
         
-        std::fs::write(&meta_path, content)
-            .with_context(|| format!("Failed to write {}", meta_path.display()))?;
-        
-        Ok(())
+        config.world = self.clone();
+        config.save(world_path)
     }
 }
 
@@ -141,8 +63,9 @@ impl World {
         let world_root = super::config::WorldConfig::get_world_root()
             .context("Not in a multiverse project directory")?;
         
-        let meta = WorldMeta::load(&world_root)
-            .context("Failed to load world metadata")?;
+        let config = super::config::WorldConfig::load()
+            .context("Failed to load world configuration")?;
+        let meta = config.world;
         
         Ok(World {
             path: world_root,
@@ -188,6 +111,27 @@ impl World {
     fn init_from_git(repo_url: String, current_dir: std::path::PathBuf) -> Result<Self> {
         super::git::WorldGitRepo::clone_from(&repo_url, &current_dir)?;
         
+        // Check if cloned repository has .multiverse setup
+        let multiverse_dir = current_dir.join(".multiverse");
+        let needs_multiverse_setup = !multiverse_dir.exists();
+        
+        if needs_multiverse_setup {
+            // Repository doesn't have .multiverse setup - we need to initialize it
+            std::fs::create_dir_all(&multiverse_dir)
+                .context("Failed to create .multiverse directory")?;
+                
+            // Create default config based on repository name
+            let repo_name = current_dir
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("Unknown World")
+                .to_string();
+                
+            let config = super::config::WorldConfig::new(repo_name, None);
+            config.save(&current_dir)
+                .context("Failed to save configuration")?;
+        }
+        
         // Verify database exists or initialize it
         if let Ok(db_path) = super::config::WorldConfig::get_database_path() {
             if !db_path.exists() {
@@ -196,8 +140,15 @@ impl World {
             }
         }
         
-        let meta = WorldMeta::load(&current_dir)
-            .context("Failed to load world metadata from cloned repository")?;
+        // Generate LLM extraction guide if this appears to be existing content without CLI setup
+        if needs_multiverse_setup && Self::should_generate_extraction_guide(&current_dir)? {
+            Self::generate_extraction_guide(&current_dir)
+                .context("Failed to generate LLM extraction guide")?;
+        }
+        
+        let config = super::config::WorldConfig::load()
+            .context("Failed to load world configuration")?;
+        let meta = config.world;
         
         Ok(World {
             path: current_dir,
@@ -223,6 +174,12 @@ impl World {
         Self::create_fundamental_files(&current_dir, &name, description.as_deref(), merge)
             .context("Failed to create fundamental files")?;
         
+        // Generate LLM extraction guide if we're merging with existing content
+        if merge && Self::should_generate_extraction_guide(&current_dir)? {
+            Self::generate_extraction_guide(&current_dir)
+                .context("Failed to generate LLM extraction guide")?;
+        }
+        
         let db_path = multiverse_dir.join("world.db");
         super::database::init_world_database(&db_path)
             .context("Failed to initialize world database")?;
@@ -232,10 +189,10 @@ impl World {
         
         let mut meta = WorldMeta::new(name, description);
         if let Some(aesthetic_value) = aesthetic {
-            meta.visual_identity = Some(VisualIdentity {
+            meta.visual_identity = VisualIdentity {
                 estetica: aesthetic_value,
                 descrizione: "Custom aesthetic".to_string(),
-            });
+            };
         }
         
         Ok(World {
@@ -355,6 +312,73 @@ impl World {
         println!("📥 Import data from SQL scripts");
         println!("   --file <path>  : Import from specific file or directory");
         println!("   --all          : Import all files from sql/");
+        Ok(())
+    }
+    
+    /// Check if we should generate an extraction guide (has content that needs processing)
+    fn should_generate_extraction_guide(world_path: &Path) -> Result<bool> {
+        // Look for signs of existing narrative content that would benefit from extraction
+        let stories_dir = world_path.join("stories");
+        let has_stories_dir = stories_dir.exists() && stories_dir.is_dir();
+        
+        if has_stories_dir {
+            // Check if stories directory has any .md files
+            if let Ok(entries) = std::fs::read_dir(&stories_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        // Check subdirectories for .md files
+                        if let Ok(sub_entries) = std::fs::read_dir(&path) {
+                            for sub_entry in sub_entries.flatten() {
+                                if sub_entry.path().extension().and_then(|s| s.to_str()) == Some("md") {
+                                    return Ok(true);
+                                }
+                            }
+                        }
+                    } else if path.extension().and_then(|s| s.to_str()) == Some("md") {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+        
+        // Also check for any top-level .md files that might be narrative content
+        if let Ok(entries) = std::fs::read_dir(world_path) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
+                    let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    // Skip known non-narrative files
+                    if !["README.md", "CLAUDE.md", "EXTRACTION_GUIDE.md"].contains(&filename) {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+        
+        Ok(false)
+    }
+    
+    /// Generate the LLM extraction guide
+    fn generate_extraction_guide(world_path: &Path) -> Result<()> {
+        use crate::templates::EXTRACTION_GUIDE;
+        
+        let guide_path = world_path.join("EXTRACTION_GUIDE.md");
+        std::fs::write(&guide_path, EXTRACTION_GUIDE)
+            .with_context(|| format!("Failed to write extraction guide to {}", guide_path.display()))?;
+        
+        // Create sql directory if it doesn't exist
+        let sql_dir = world_path.join("sql");
+        if !sql_dir.exists() {
+            std::fs::create_dir_all(&sql_dir)
+                .with_context(|| format!("Failed to create sql directory at {}", sql_dir.display()))?;
+        }
+        
+        println!("📋 Generated EXTRACTION_GUIDE.md");
+        println!("   This file contains instructions for Claude/LLM to analyze existing content");
+        println!("   and generate SQL files for database import.");
+        println!("   📁 Also created sql/ directory for generated SQL files");
+        
         Ok(())
     }
 }

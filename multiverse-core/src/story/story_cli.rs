@@ -2,17 +2,23 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum StoryCommands {
-    /// Create a new story
+    /// Create a new story with flexible metadata
     Create {
-        /// Story name
+        /// Story name (used for directory naming)
         name: String,
-        /// Narrator name
+        /// Story title (human-readable title)
         #[arg(long)]
-        narrator: String,
-        /// Story type (diary, extra, etc.)
-        #[arg(long)]
-        story_type: Option<String>,
+        title: String,
+        /// Story type (diary, book, etc.)
+        #[arg(long, short = 't')]
+        story_type: String,
+        /// Set metadata field (can be used multiple times: --set narrator=John --set genre=fantasy)
+        #[arg(long, value_parser = parse_key_val)]
+        set: Vec<(String, String)>,
     },
+    
+    /// List available story types with their required fields
+    Types,
     
     /// List stories in current world
     List,
@@ -31,4 +37,12 @@ pub enum StoryCommands {
         #[arg(long)]
         force: bool,
     },
+}
+
+/// Parse a single key-value pair for --set flag
+fn parse_key_val(s: &str) -> Result<(String, String), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    let pos = s
+        .find('=')
+        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
+    Ok((s[..pos].to_string(), s[pos + 1..].to_string()))
 }

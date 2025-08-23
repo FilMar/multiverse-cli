@@ -8,4 +8,4 @@ pub mod handlers;
 pub use config::*;
 pub use cli::*;
 pub use handlers::*;
-pub use models::{World, WorldMeta, VisualIdentity, GlobalConfig, CategoryRules, CategoryConfig};
+pub use models::{World, WorldMeta, VisualIdentity, GlobalConfig};

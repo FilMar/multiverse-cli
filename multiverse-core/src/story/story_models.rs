@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-/// Story metadata and configuration
+/// Story metadata and configuration with flexible metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Story {
     pub name: String,
-    pub narrator: String,
+    pub title: String,
     pub story_type: String,
+    pub metadata: std::collections::HashMap<String, serde_json::Value>,
     pub description: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub status: StoryStatus,
@@ -28,23 +29,64 @@ impl Default for StoryStatus {
 
 // Core interface
 impl Story {
-    pub fn new(name: String, narrator: String, story_type: Option<String>) -> Self {
-        let story_type = story_type.unwrap_or_else(|| "diary".to_string());
+    /// Factory method with full validation - recommended way to create stories
+    pub fn create_new(name: String, title: String, story_type: String, set_args: Vec<(String, String)>) -> anyhow::Result<Self> {
+        use crate::world::WorldConfig;
+        use anyhow::Context;
         
+        // Load config and get story type
+        let config = WorldConfig::load()
+            .context("Failed to load world configuration")?;
+        
+        let type_config = config.get_story_type(&story_type)?;
+        
+        // Use StoryTypeConfig to build and validate metadata
+        let metadata = type_config.build_metadata(set_args)
+            .with_context(|| format!("Failed to build metadata for story type '{}'", story_type))?;
+        
+        Ok(Self::new(name, title, story_type, metadata))
+    }
+    
+    /// Direct constructor (for internal use or when metadata is already validated)
+    pub fn new(name: String, title: String, story_type: String, metadata: std::collections::HashMap<String, serde_json::Value>) -> Self {
         Self {
             name,
-            narrator,
+            title,
             story_type,
+            metadata,
             description: None,
             created_at: chrono::Utc::now(),
             status: StoryStatus::Active,
         }
     }
     
-    /// Get the story directory path within stories/ with pattern nome_tipo/
+    /// Get the story directory path within stories/ with snake_case name
     pub fn get_story_path(&self, world_root: &Path) -> std::path::PathBuf {
-        let dir_name = format!("{}_{}", self.name, self.story_type);
-        world_root.join("stories").join(&dir_name)
+        let snake_case_name = self.title_to_snake_case();
+        world_root.join("stories").join(&snake_case_name)
+    }
+    
+    /// Convert story title to snake_case for directory name
+    fn title_to_snake_case(&self) -> String {
+        self.title
+            .to_lowercase()
+            .chars()
+            .map(|c| {
+                if c.is_alphanumeric() {
+                    c
+                } else if c.is_whitespace() || c == '-' || c == '_' {
+                    '_'
+                } else {
+                    // Skip special characters
+                    '\0'
+                }
+            })
+            .filter(|&c| c != '\0')
+            .collect::<String>()
+            .split('_')
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<&str>>()
+            .join("_")
     }
 
     /// Create story on filesystem and database

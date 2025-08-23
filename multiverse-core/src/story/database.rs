@@ -5,12 +5,13 @@ use rusqlite::{Connection, params};
 
 /// Initialize story-related tables in the database
 pub fn init_story_tables(conn: &Connection) -> Result<()> {
-    // Create stories table
+    // Create stories table with flexible metadata
     conn.execute(
         "CREATE TABLE IF NOT EXISTS stories (
             name TEXT PRIMARY KEY,
-            narrator TEXT NOT NULL,
+            title TEXT NOT NULL,
             story_type TEXT NOT NULL,
+            metadata TEXT,
             description TEXT,
             created_at TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'Active'
@@ -47,13 +48,17 @@ pub fn create_story(conn: &Connection, story: &Story) -> Result<()> {
         StoryStatus::Archived => "Archived",
     };
     
+    let metadata_json = serde_json::to_string(&story.metadata)
+        .context("Failed to serialize story metadata")?;
+    
     conn.execute(
-        "INSERT INTO stories (name, narrator, story_type, description, created_at, status) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        "INSERT INTO stories (name, title, story_type, metadata, description, created_at, status) 
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
             story.name,
-            story.narrator,
+            story.title,
             story.story_type,
+            metadata_json,
             story.description,
             story.created_at.to_rfc3339(),
             status_str
@@ -66,16 +71,15 @@ pub fn create_story(conn: &Connection, story: &Story) -> Result<()> {
 /// List all stories
 pub fn list_stories(conn: &Connection) -> Result<Vec<Story>> {
     let mut stmt = conn.prepare(
-        "SELECT name, narrator, story_type, description, created_at, status 
+        "SELECT name, title, story_type, metadata, description, created_at, status 
          FROM stories ORDER BY created_at DESC"
     )?;
     
     let story_iter = stmt.query_map([], |row| {
         let story_type_str: String = row.get(2)?;
-        let status_str: String = row.get(5)?;
-        let created_at_str: String = row.get(4)?;
-        
-        let story_type = story_type_str;
+        let metadata_str: String = row.get(3)?;
+        let status_str: String = row.get(6)?;
+        let created_at_str: String = row.get(5)?;
         
         let status = match status_str.as_str() {
             "Active" => StoryStatus::Active,
@@ -86,14 +90,19 @@ pub fn list_stories(conn: &Connection) -> Result<Vec<Story>> {
         };
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|e| rusqlite::Error::InvalidColumnType(2, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_e| rusqlite::Error::InvalidColumnType(5, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
+            
+        let metadata: std::collections::HashMap<String, serde_json::Value> = 
+            serde_json::from_str(&metadata_str)
+                .map_err(|_e| rusqlite::Error::InvalidColumnType(3, "metadata".to_string(), rusqlite::types::Type::Text))?;
         
         Ok(Story {
             name: row.get(0)?,
-            narrator: row.get(1)?,
-            story_type,
-            description: row.get(3)?,
+            title: row.get(1)?,
+            story_type: story_type_str,
+            metadata,
+            description: row.get(4)?,
             created_at,
             status,
         })
@@ -110,16 +119,15 @@ pub fn list_stories(conn: &Connection) -> Result<Vec<Story>> {
 /// Get a specific story by name
 pub fn get_story(conn: &Connection, name: &str) -> Result<Option<Story>> {
     let mut stmt = conn.prepare(
-        "SELECT name, narrator, story_type, description, created_at, status 
+        "SELECT name, title, story_type, metadata, description, created_at, status 
          FROM stories WHERE name = ?1"
     )?;
     
     let mut rows = stmt.query_map([name], |row| {
         let story_type_str: String = row.get(2)?;
-        let status_str: String = row.get(5)?;
-        let created_at_str: String = row.get(4)?;
-        
-        let story_type = story_type_str;
+        let metadata_str: String = row.get(3)?;
+        let status_str: String = row.get(6)?;
+        let created_at_str: String = row.get(5)?;
         
         let status = match status_str.as_str() {
             "Active" => StoryStatus::Active,
@@ -130,14 +138,19 @@ pub fn get_story(conn: &Connection, name: &str) -> Result<Option<Story>> {
         };
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|e| rusqlite::Error::InvalidColumnType(2, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_e| rusqlite::Error::InvalidColumnType(5, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
+            
+        let metadata: std::collections::HashMap<String, serde_json::Value> = 
+            serde_json::from_str(&metadata_str)
+                .map_err(|_e| rusqlite::Error::InvalidColumnType(3, "metadata".to_string(), rusqlite::types::Type::Text))?;
         
         Ok(Story {
             name: row.get(0)?,
-            narrator: row.get(1)?,
-            story_type,
-            description: row.get(3)?,
+            title: row.get(1)?,
+            story_type: story_type_str,
+            metadata,
+            description: row.get(4)?,
             created_at,
             status,
         })
@@ -295,4 +308,36 @@ pub fn get_next_episode_number(conn: &Connection, story_name: &str) -> Result<i3
     
     let next_number: i32 = stmt.query_row([story_name], |row| row.get(0))?;
     Ok(next_number)
+}
+
+/// Get total count of stories
+pub fn count_stories(conn: &Connection) -> Result<i32> {
+    let mut stmt = conn.prepare("SELECT COUNT(*) FROM stories")?;
+    let count: i32 = stmt.query_row([], |row| row.get(0))?;
+    Ok(count)
+}
+
+/// Get total count of episodes across all stories
+pub fn count_episodes(conn: &Connection) -> Result<i32> {
+    let mut stmt = conn.prepare("SELECT COUNT(*) FROM episodes")?;
+    let count: i32 = stmt.query_row([], |row| row.get(0))?;
+    Ok(count)
+}
+
+/// Get episodes count by status
+pub fn count_episodes_by_status(conn: &Connection) -> Result<Vec<(String, i32)>> {
+    let mut stmt = conn.prepare(
+        "SELECT status, COUNT(*) FROM episodes GROUP BY status ORDER BY status"
+    )?;
+    
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, i32>(1)?))
+    })?;
+    
+    let mut results = Vec::new();
+    for row in rows {
+        results.push(row?);
+    }
+    
+    Ok(results)
 }

@@ -4,6 +4,13 @@ use super::git::GitStatusPrinter;
 use super::config::WorldConfig;
 use anyhow::{Result, Context, bail};
 
+#[derive(Debug)]
+struct WorldStatistics {
+    story_count: i32,
+    episode_count: i32,
+    episodes_by_status: Vec<(String, i32)>,
+}
+
 pub fn handle_world_command(command: WorldCommands) -> Result<()> {
     match command {
         WorldCommands::Init { name, description, aesthetic, from_git, merge } => {
@@ -56,21 +63,35 @@ fn handle_info() -> Result<()> {
         println!("   Description: {description}");
     }
     
-    if let Some(visual_identity) = &world.meta.visual_identity {
-        println!("   Aesthetic: {} - {}", 
-            visual_identity.estetica, 
-            visual_identity.descrizione);
-    }
+    println!("   Aesthetic: {} - {}", 
+        world.meta.visual_identity.estetica, 
+        world.meta.visual_identity.descrizione);
     
-    if let Some(global_config) = &world.meta.global_config {
-        println!("   Numbering format: {}", global_config.formato_numerazione);
-        println!("   Default template: {}", global_config.template_default);
-    }
+    println!("   Numbering format: {}", world.meta.global_config.formato_numerazione);
+    println!("   Default template: {}", world.meta.global_config.template_default);
     
     println!("   Database: ✅ Valid");
-    // TODO: Query database for stats
-    println!("   Series: (to be implemented)");
-    println!("   Episodes: (to be implemented)");
+    
+    // Get real statistics from database
+    match get_world_statistics() {
+        Ok(stats) => {
+            println!("   Stories: {}", stats.story_count);
+            println!("   Episodes: {} total", stats.episode_count);
+            
+            if !stats.episodes_by_status.is_empty() {
+                print!("     Status breakdown: ");
+                let status_strs: Vec<String> = stats.episodes_by_status
+                    .iter()
+                    .map(|(status, count)| format!("{}: {}", status, count))
+                    .collect();
+                println!("{}", status_strs.join(", "));
+            }
+        }
+        Err(e) => {
+            println!("   Stories: ❌ Error reading database: {}", e);
+            println!("   Episodes: ❌ Error reading database");
+        }
+    }
     
     Ok(())
 }
@@ -162,4 +183,30 @@ fn handle_import(file: Option<String>, all: bool) -> Result<()> {
     World::import_sql(file, all)?;
     
     Ok(())
+}
+
+fn get_world_statistics() -> Result<WorldStatistics> {
+    use crate::database::get_connection;
+    use crate::story::database::{count_stories, count_episodes, count_episodes_by_status};
+    
+    let db_path = WorldConfig::get_database_path()
+        .context("Failed to get database path")?;
+    
+    let conn = get_connection(&db_path)
+        .context("Failed to connect to database")?;
+    
+    let story_count = count_stories(&conn)
+        .context("Failed to count stories")?;
+    
+    let episode_count = count_episodes(&conn)
+        .context("Failed to count episodes")?;
+    
+    let episodes_by_status = count_episodes_by_status(&conn)
+        .context("Failed to count episodes by status")?;
+    
+    Ok(WorldStatistics {
+        story_count,
+        episode_count,
+        episodes_by_status,
+    })
 }
