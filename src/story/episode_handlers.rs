@@ -10,7 +10,22 @@ pub fn handle_episode_command(command: EpisodeCommands) -> Result<()> {
         EpisodeCommands::List { story } => handle_list(story),
         EpisodeCommands::Info { story, number } => handle_info(story, number),
         EpisodeCommands::Delete { story, number, force } => handle_delete(story, number, force),
+        EpisodeCommands::Update { story, number, title, status, word_count } => handle_update(story, number, title, status, word_count),
     }
+}
+
+fn handle_update(story_name: String, episode_number: i32, title: Option<String>, status: Option<String>, word_count: Option<i32>) -> Result<()> {
+    println!("🔄 Updating episode {} in story '{}'", episode_number, story_name);
+
+    let mut episode = Episode::get(&story_name, episode_number)?
+        .ok_or_else(|| anyhow::anyhow!("Episode {} not found in story '{}'", episode_number, story_name))?;
+
+    episode.update(title, status, word_count)?;
+
+    println!("✅ Episode {} updated!", episode.episode_number);
+    handle_info(story_name, episode_number)?;
+
+    Ok(())
 }
 
 fn handle_create(story_name: String, title: Option<String>) -> Result<()> {

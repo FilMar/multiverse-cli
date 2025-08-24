@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::{story::{StoryCommands, EpisodeCommands}, character::CharacterCommands, location::LocationCommands, world::WorldCommands};
+use crate::{story::{StoryCommands, EpisodeCommands}, character::CharacterCommands, location::LocationCommands, system::SystemCommands, faction::FactionCommands, event::EventCommands, world::WorldCommands, race::RaceCommands};
 
 #[derive(Parser)]
 #[command(name = "multiverse")]
@@ -40,6 +40,30 @@ pub enum Commands {
     Location {
         #[command(subcommand)]
         command: LocationCommands,
+    },
+    
+    /// Manage systems (requires being in a multiverse project)
+    System {
+        #[command(subcommand)]
+        command: SystemCommands,
+    },
+    
+    /// Manage factions (requires being in a multiverse project)
+    Faction {
+        #[command(subcommand)]
+        command: FactionCommands,
+    },
+    
+    /// Manage events (requires being in a multiverse project)
+    Event {
+        #[command(subcommand)]
+        command: EventCommands,
+    },
+
+    /// Manage races (requires being in a multiverse project)
+    Race {
+        #[command(subcommand)]
+        command: RaceCommands,
     },
     
     /// Show project information

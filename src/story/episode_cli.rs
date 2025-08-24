@@ -41,4 +41,23 @@ pub enum EpisodeCommands {
         #[arg(long)]
         force: bool,
     },
+
+    /// Update an existing episode
+    Update {
+        /// Story name
+        #[arg(short, long)]
+        story: String,
+        /// Episode number
+        #[arg(short, long)]
+        number: i32,
+        /// New episode title
+        #[arg(short, long)]
+        title: Option<String>,
+        /// New episode status
+        #[arg(long)]
+        status: Option<String>,
+        /// New word count
+        #[arg(long)]
+        word_count: Option<i32>,
+    },
 }

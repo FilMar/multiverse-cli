@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Location {
     pub name: String,
     pub display_name: String,
-    pub location_type: String,
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
-    pub description: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub status: LocationStatus,
 }
@@ -29,7 +27,7 @@ impl Default for LocationStatus {
 // Core interface
 impl Location {
     /// Factory method with full validation
-    pub fn create_new(name: String, display_name: String, location_type: String, set_args: Vec<(String, String)>) -> anyhow::Result<Self> {
+    pub fn create_new(name: String, display_name: String, set_args: Vec<(String, String)>) -> anyhow::Result<Self> {
         let mut metadata = std::collections::HashMap::new();
         
         // Process set_args into metadata
@@ -37,17 +35,15 @@ impl Location {
             metadata.insert(key, serde_json::Value::String(value));
         }
         
-        Ok(Self::new(name, display_name, location_type, metadata))
+        Ok(Self::new(name, display_name, metadata))
     }
     
     /// Direct constructor
-    pub fn new(name: String, display_name: String, location_type: String, metadata: std::collections::HashMap<String, serde_json::Value>) -> Self {
+    pub fn new(name: String, display_name: String, metadata: std::collections::HashMap<String, serde_json::Value>) -> Self {
         Self {
             name,
             display_name,
-            location_type,
             metadata,
-            description: None,
             created_at: chrono::Utc::now(),
             status: LocationStatus::Active,
         }
@@ -97,6 +93,20 @@ impl Location {
         
         Ok(())
     }
+
+    pub fn update(&mut self, display_name: Option<String>, set_args: Vec<(String, String)>) -> anyhow::Result<()> {
+        if let Some(display_name) = display_name {
+            self.display_name = display_name;
+        }
+
+        for (key, value) in set_args {
+            self.metadata.insert(key, serde_json::Value::String(value));
+        }
+
+        self.update_in_database()?;
+
+        Ok(())
+    }
 }
 
 // Private utility functions
@@ -129,6 +139,14 @@ impl Location {
         let conn = Self::get_database_connection()?;
         super::database::create_location(&conn, self)
             .context("Failed to save location to database")
+    }
+
+    fn update_in_database(&self) -> anyhow::Result<()> {
+        use anyhow::Context;
+
+        let conn = Self::get_database_connection()?;
+        super::database::update_location(&conn, self)
+            .context("Failed to update location in database")
     }
 
     fn delete_from_database(&self) -> anyhow::Result<()> {

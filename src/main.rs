@@ -1,18 +1,9 @@
 mod cli;
-mod database;
-mod world;
-mod story;
-mod character;
-mod location;
-mod templates;
 
 use clap::Parser;
 use anyhow::Result;
 use cli::{Cli, Commands};
-use world::{handle_world_command, WorldConfig};
-use story::{handle_story_command, handle_episode_command};
-use character::handle_character_command;
-use location::handle_location_command;
+use multiverse::*;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -23,6 +14,10 @@ fn main() -> Result<()> {
         Commands::Episode { command } => handle_episode_command(command),
         Commands::Character { command } => handle_character_command(command),
         Commands::Location { command } => handle_location_command(command),
+        Commands::System { command } => handle_system_command(command),
+        Commands::Faction { command } => handle_faction_command(command),
+        Commands::Event { command } => handle_event_command(command),
+        Commands::Race { command } => handle_race_command(command),
         Commands::Info => handle_info(),
     }
 }

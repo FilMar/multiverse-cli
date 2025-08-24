@@ -9,9 +9,7 @@ pub fn init_location_tables(conn: &Connection) -> Result<()> {
         "CREATE TABLE IF NOT EXISTS locations (
             name TEXT PRIMARY KEY,
             display_name TEXT NOT NULL,
-            location_type TEXT NOT NULL,
             metadata TEXT,
-            description TEXT,
             created_at TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'Active'
         )",
@@ -34,14 +32,12 @@ pub fn create_location(conn: &Connection, location: &Location) -> Result<()> {
         .context("Failed to serialize location metadata")?;
     
     conn.execute(
-        "INSERT INTO locations (name, display_name, location_type, metadata, description, created_at, status) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO locations (name, display_name, metadata, created_at, status) 
+         VALUES (?1, ?2, ?3, ?4, ?5)",
         params![
             location.name,
             location.display_name,
-            location.location_type,
             metadata_json,
-            location.description,
             location.created_at.to_rfc3339(),
             status_str
         ],
@@ -53,15 +49,14 @@ pub fn create_location(conn: &Connection, location: &Location) -> Result<()> {
 /// List all locations
 pub fn list_locations(conn: &Connection) -> Result<Vec<Location>> {
     let mut stmt = conn.prepare(
-        "SELECT name, display_name, location_type, metadata, description, created_at, status 
+        "SELECT name, display_name, metadata, created_at, status 
          FROM locations ORDER BY created_at DESC"
     )?;
     
     let location_iter = stmt.query_map([], |row| {
-        let location_type_str: String = row.get(2)?;
-        let metadata_str: String = row.get(3)?;
-        let status_str: String = row.get(6)?;
-        let created_at_str: String = row.get(5)?;
+        let metadata_str: String = row.get(2)?;
+        let status_str: String = row.get(4)?;
+        let created_at_str: String = row.get(3)?;
         
         let status = match status_str.as_str() {
             "Active" => LocationStatus::Active,
@@ -72,19 +67,17 @@ pub fn list_locations(conn: &Connection) -> Result<Vec<Location>> {
         };
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|_e| rusqlite::Error::InvalidColumnType(5, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_e| rusqlite::Error::InvalidColumnType(3, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
             
         let metadata: std::collections::HashMap<String, serde_json::Value> = 
             serde_json::from_str(&metadata_str)
-                .map_err(|_e| rusqlite::Error::InvalidColumnType(3, "metadata".to_string(), rusqlite::types::Type::Text))?;
+                .map_err(|_e| rusqlite::Error::InvalidColumnType(2, "metadata".to_string(), rusqlite::types::Type::Text))?;
         
         Ok(Location {
             name: row.get(0)?,
             display_name: row.get(1)?,
-            location_type: location_type_str,
             metadata,
-            description: row.get(4)?,
             created_at,
             status,
         })
@@ -101,15 +94,14 @@ pub fn list_locations(conn: &Connection) -> Result<Vec<Location>> {
 /// Get a specific location by name
 pub fn get_location(conn: &Connection, name: &str) -> Result<Option<Location>> {
     let mut stmt = conn.prepare(
-        "SELECT name, display_name, location_type, metadata, description, created_at, status 
+        "SELECT name, display_name, metadata, created_at, status 
          FROM locations WHERE name = ?1"
     )?;
     
     let mut rows = stmt.query_map([name], |row| {
-        let location_type_str: String = row.get(2)?;
-        let metadata_str: String = row.get(3)?;
-        let status_str: String = row.get(6)?;
-        let created_at_str: String = row.get(5)?;
+        let metadata_str: String = row.get(2)?;
+        let status_str: String = row.get(4)?;
+        let created_at_str: String = row.get(3)?;
         
         let status = match status_str.as_str() {
             "Active" => LocationStatus::Active,
@@ -120,19 +112,17 @@ pub fn get_location(conn: &Connection, name: &str) -> Result<Option<Location>> {
         };
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|_e| rusqlite::Error::InvalidColumnType(5, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_e| rusqlite::Error::InvalidColumnType(3, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
             
         let metadata: std::collections::HashMap<String, serde_json::Value> = 
             serde_json::from_str(&metadata_str)
-                .map_err(|_e| rusqlite::Error::InvalidColumnType(3, "metadata".to_string(), rusqlite::types::Type::Text))?;
+                .map_err(|_e| rusqlite::Error::InvalidColumnType(2, "metadata".to_string(), rusqlite::types::Type::Text))?;
         
         Ok(Location {
             name: row.get(0)?,
             display_name: row.get(1)?,
-            location_type: location_type_str,
             metadata,
-            description: row.get(4)?,
             created_at,
             status,
         })
@@ -149,5 +139,30 @@ pub fn delete_location(conn: &Connection, name: &str) -> Result<()> {
     conn.execute("DELETE FROM locations WHERE name = ?1", [name])
         .context("Failed to delete location")?;
     
+    Ok(())
+}
+
+/// Update an existing location
+pub fn update_location(conn: &Connection, location: &Location) -> Result<()> {
+    let status_str = match location.status {
+        LocationStatus::Active => "Active",
+        LocationStatus::Destroyed => "Destroyed",
+        LocationStatus::Abandoned => "Abandoned",
+        LocationStatus::Archived => "Archived",
+    };
+
+    let metadata_json = serde_json::to_string(&location.metadata)
+        .context("Failed to serialize location metadata")?;
+
+    conn.execute(
+        "UPDATE locations SET display_name = ?1, metadata = ?2, status = ?3 WHERE name = ?4",
+        params![
+            location.display_name,
+            metadata_json,
+            status_str,
+            location.name
+        ],
+    ).context("Failed to update location")?;
+
     Ok(())
 }

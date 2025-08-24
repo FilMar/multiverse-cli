@@ -90,6 +90,25 @@ impl Episode {
         
         Ok(())
     }
+
+    pub fn update(&mut self, title: Option<String>, status: Option<String>, word_count: Option<i32>) -> anyhow::Result<()> {
+        if let Some(title) = title {
+            self.title = Some(title);
+        }
+
+        if let Some(status_str) = status {
+            self.status = serde_json::from_str(&format!("\"{}\"", status_str)).unwrap_or_default();
+        }
+
+        if let Some(word_count) = word_count {
+            self.word_count = Some(word_count);
+        }
+
+        self.updated_at = chrono::Utc::now();
+        self.update_in_database()?;
+
+        Ok(())
+    }
 }
 
 // Private utility functions  
@@ -135,6 +154,14 @@ impl Episode {
         let conn = Self::get_database_connection()?;
         super::database::create_episode(&conn, self)
             .context("Failed to save episode to database")
+    }
+
+    fn update_in_database(&self) -> anyhow::Result<()> {
+        use anyhow::Context;
+
+        let conn = Self::get_database_connection()?;
+        super::database::update_episode(&conn, self)
+            .context("Failed to update episode in database")
     }
 
     fn delete_from_database(&self) -> anyhow::Result<()> {

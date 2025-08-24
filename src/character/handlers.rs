@@ -10,7 +10,22 @@ pub fn handle_character_command(command: CharacterCommands) -> Result<()> {
         CharacterCommands::List => handle_list(),
         CharacterCommands::Info { name } => handle_info(name),
         CharacterCommands::Delete { name, force } => handle_delete(name, force),
+        CharacterCommands::Update { name, display_name, status, set } => handle_update(name, display_name, status, set),
     }
+}
+
+fn handle_update(name: String, display_name: Option<String>, status: Option<String>, set_args: Vec<(String, String)>) -> Result<()> {
+    println!("🔄 Updating character '{name}'");
+
+    let mut character = Character::get(&name)?
+        .ok_or_else(|| anyhow::anyhow!("Character '{}' not found", name))?;
+
+    character.update(display_name, status, set_args)?;
+
+    println!("✅ Character '{}' updated!", name);
+    show_created_character(&character)?;
+
+    Ok(())
 }
 
 fn handle_create(name: String, display_name: String, set_args: Vec<(String, String)>) -> Result<()> {
@@ -29,8 +44,8 @@ fn show_created_character(character: &Character) -> Result<()> {
     println!("   Display name: {}", character.display_name);
     println!("   Status: {:?}", character.status);
     
-    if let Some(desc) = &character.description {
-        println!("   Description: {desc}");
+    if let Some(desc) = character.metadata.get("description") {
+        println!("   Description: {}", desc.as_str().unwrap_or(""));
     }
     
     // Show metadata
@@ -77,8 +92,8 @@ fn handle_list() -> Result<()> {
             println!("      Faction: {}", faction.as_str().unwrap_or("Unknown"));
         }
         
-        if let Some(desc) = &character.description {
-            println!("      {desc}");
+        if let Some(desc) = character.metadata.get("description") {
+            println!("      {}", desc.as_str().unwrap_or(""));
         }
     }
     
@@ -93,8 +108,8 @@ fn handle_info(name: String) -> Result<()> {
     println!("   Status: {:?}", character.status);
     println!("   Created: {}", character.created_at.format("%Y-%m-%d %H:%M"));
     
-    if let Some(desc) = &character.description {
-        println!("   Description: {desc}");
+    if let Some(desc) = character.metadata.get("description") {
+        println!("   Description: {}", desc.as_str().unwrap_or(""));
     }
     
     // Show metadata

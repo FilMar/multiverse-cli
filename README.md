@@ -12,11 +12,15 @@ Una CLI per gestire progetti narrativi complessi con focus su worldbuilding e st
 
 ### ✨ Features Implementate
 
-- 🗃️ **Database SQLite** per metadati storie ed episodi
-- 📚 **Story Management** con tipi configurabili e metadati JSON flessibili
-- 📄 **Episode Management** con numerazione automatica e stati
+- 🗄️ **Database SQLite** completo per tutti i metadati
+- 📚 **Story & Episode Management** con tipi configurabili e stati
+- 👥 **Character & Location Management** con metadati JSON completamente flessibili
+- 🔮 **System & Faction Management** per elementi di worldbuilding
+- 📅 **Event Management** con supporto per timeline cronologica
+- ✏️ **Full CRUD** per tutte le entità (Create, Read, Update, Delete)
 - 🔗 **Git integration** per sincronizzazione repository
 - ⚙️ **Configuration System** TOML per personalizzazione completa
+- 🧩 **Metadata flessibili** - Tutti i campi descrittivi e tipi gestiti via `--set key=value`
 
 ## 🚀 Quick Start
 
@@ -38,13 +42,18 @@ cargo install --path .
 
 ```bash
 # Inizializza nuovo mondo narrativo
-multiverse world init wandering-sun --from-git https://github.com/user/wandering-sun
+multiverse world init wandering-sun
 
-# Crea prima storia
+# Crea una storia, un personaggio, un luogo, un sistema, una fazione e un evento
 multiverse story create "fenrik_mealor" --type diary
+multiverse character create "fenrik" --display-name "Fenrik Mealor" --set profession=explorer --set description="Esploratore del regno"
+multiverse location create "glass_gardens" --display-name "Glass Gardens" --set type=region --set description="Giardini cristallini"
+multiverse system create "aetherial_magic" --display-name "Aetherial Magic" --set type=magic --set description="Sistema magico etereo"
+multiverse faction create "sylvan_guardians" --display-name "Sylvan Guardians" --set type=guild --set description="Guardiani della foresta"
+multiverse event create "first_contact" --display-name "First Contact" --set type=discovery --set description="Primo contatto" --date "1A/1/1"
 
-# Crea primo episodio
-multiverse episode create --story fenrik_mealor
+# Crea un episodio e associalo a un personaggio
+multiverse episode create --story fenrik_mealor --title "Il Giardino di Vetro"
 ```
 
 ## 📖 Architettura
@@ -62,11 +71,14 @@ wandering-sun/               # Repository mondo
 │       ├── 001.md
 │       └── 002.md
 ├── lore/                    # File worldbuilding
-├── personaggi/             # Schede personaggi (JSON)
-├── luoghi/                 # Schede luoghi (JSON)  
+├── sql/                     # File SQL per import/export dati
+│   ├── 03_characters.sql
+│   ├── 04_locations.sql
+│   └── 05_relations.sql
 ├── .multiverse/
-│   ├── world.db            # Database SQLite metadati
-│   └── config.toml         # Configurazione mondo
+│   ├── world.db            # Database SQLite completo
+│   ├── config.toml         # Configurazione mondo
+│   └── timeline.toml       # Configurazione calendario e timeline
 └── README.md
 ```
 
@@ -76,58 +88,58 @@ Il progetto utilizza **SQLite** per gestire metadati:
 
 - **`stories`** - Storie con metadata JSON configurabile
 - **`episodes`** - Episodi individuali con stati e metadati
-
-**Note**: Features avanzate come personaggi, luoghi, timeline sono in roadmap ma non ancora implementate.
+- **`characters`** - Personaggi con metadata flessibili e stati
+- **`locations`** - Luoghi con tipologie e metadata configurabili
+- **`episode_characters`** - Relazioni tra episodi e personaggi
 
 ## 🎮 Comandi CLI
 
-### Gestione Mondi
+### Gestione Mondo e Storie
 
 ```bash
-multiverse world init <nome> --from-git <url>   # Inizializza da Git
-multiverse world pull                            # Sincronizza da Git  
-multiverse world push                            # Push modifiche
-multiverse world info                            # Info progetto corrente
+multiverse world init <nome>     # Inizializza un mondo
+multiverse world info              # Info e statistiche del mondo
+multiverse story create <nome>   # Crea una nuova storia
+multiverse story update <nome>   # Aggiorna una storia
+multiverse episode create <...>  # Crea un nuovo episodio
+multiverse episode update <...>  # Aggiorna un episodio
 ```
 
-### Gestione Storie
+### Worldbuilding
 
 ```bash
-# Crea storia con tipo configurabile
-multiverse story create <nome> --type <tipo>
-multiverse story list                            # Lista tutte le storie
-multiverse story info <nome>                     # Dettagli storia
+# Gestione Personaggi (tutto tramite metadata --set)
+multiverse character create <nome> --display-name <...> --set description="..." --set profession="..."
+multiverse character update <nome> --display-name <...> --set age=25 --set status=active
+
+# Gestione Luoghi (tipo e descrizione in metadata)
+multiverse location create <nome> --display-name <...> --set type=city --set description="..."
+multiverse location update <nome> --display-name <...> --set population=10000
+
+# Gestione Sistemi (es. magia, tecnologia)
+multiverse system create <nome> --display-name <...> --set type=magic --set description="..."
+multiverse system update <nome> --display-name <...> --set complexity=high
+
+# Gestione Fazioni
+multiverse faction create <nome> --display-name <...> --set type=guild --set description="..."
+multiverse faction update <nome> --display-name <...> --set alignment=neutral
+
+# Gestione Eventi Storici
+multiverse event create <nome> --display-name <...> --set type=battle --set description="..." --date <data>
+multiverse event update <nome> --display-name <...> --date <data>
+multiverse event timeline          # Mostra gli eventi in ordine cronologico
 ```
 
-### Gestione Episodi
-
-```bash
-# Crea nuovo episodio
-multiverse episode create --story <nome>
-multiverse episode list --story <nome>          # Lista episodi
-multiverse episode info --story <nome> --number <num>
-```
-
-### Informazioni Progetto
-
-```bash
-# Info progetto corrente con statistiche
-multiverse info
-```
-
-**Note**: Comandi per validazione lore, export e timeline management sono in roadmap ma non ancora implementati.
+**Note**: Comandi per validazione della coerenza, export multi-formato e analisi avanzata sono in roadmap.
 
 ## 🔮 Roadmap Features
 
 ### 📋 Prossime Implementazioni
 
-- **Characters Management**: Gestione personaggi con database e file JSON
-- **Locations Management**: Gestione luoghi con caratteristiche e relazioni
-- **Systems Management**: Sistemi di magia, tecnologia, cosmologia
-- **Factions Management**: Organizzazioni, alleanze, conflitti
-- **Lore Validation**: Sistema validazione automatica per consistency
-- **Timeline Management**: Estrazione eventi temporali e conflict detection
-- **Export System**: Export multi-formato per piattaforme diverse
+- **Content Analysis**: Word count automatico e cross-referencing migliorato.
+- **Lore Validation**: Sistema di validazione interattiva per la coerenza narrativa.
+- **Export System**: Export multi-formato per piattaforme diverse (YouTube, etc.).
+- **AI Collaboration**: Strumenti di integrazione con AI per analisi e generazione.
 
 ## 🛠️ Sviluppo
 
@@ -169,17 +181,18 @@ cargo build --release
 - [x] Git integration completa
 - [x] Configuration system TOML
 
-### Fase 2: Worldbuilding 📋
-- [ ] Characters database + CLI commands
-- [ ] Locations database + CLI commands  
-- [ ] Systems database + CLI commands
-- [ ] Factions database + CLI commands
+### Fase 2: Worldbuilding (Completata) ✅
+- [x] Characters database + CLI commands
+- [x] Locations database + CLI commands
+- [x] Systems database + CLI commands
+- [x] Factions database + CLI commands
+- [x] Events database + CLI commands
+- [x] Relazioni episodi-personaggi
 
 ### Fase 3: Advanced Features 🚧
 - [ ] Lore validation system
-- [ ] Timeline management
 - [ ] Export multi-formato
-- [ ] Claude collaboration tools
+- [ ] AI collaboration tools
 
 ## 📄 Licenza
 

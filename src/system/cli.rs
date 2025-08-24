@@ -1,54 +1,51 @@
 use clap::Subcommand;
 
 #[derive(Subcommand)]
-pub enum StoryCommands {
-    /// Create a new story with flexible metadata
+pub enum SystemCommands {
+    /// Create a new system with flexible metadata
     Create {
-        /// Story name (used for directory naming)
+        /// System name (unique identifier)
         name: String,
-        /// Story title (human-readable title)
+        /// System display name (human-readable name)
         #[arg(long)]
-        title: String,
-        /// Story type (diary, book, etc.)
+        display_name: String,
+        /// System type (magic, technology, cosmology, etc.)
         #[arg(long, short = 't')]
-        story_type: String,
-        /// Set metadata field (can be used multiple times: --set narrator=John --set genre=fantasy)
+        system_type: String,
+        /// Set metadata field (can be used multiple times: --set complexity=high --set origin=ancient)
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },
     
-    /// List available story types with their required fields
-    Types,
-    
-    /// List stories in current world
+    /// List systems in current world
     List,
     
-    /// Show story details
+    /// Show system details
     Info {
-        /// Story name
+        /// System name
         name: String,
     },
     
-    /// Delete a story
+    /// Delete a system
     Delete {
-        /// Story name
+        /// System name
         name: String,
         /// Skip confirmation prompt
         #[arg(long)]
         force: bool,
     },
 
-    /// Update an existing story
+    /// Update an existing system
     Update {
-        /// Story name
+        /// System name
         name: String,
-        /// New story title
+        /// New system display name
         #[arg(long)]
-        title: Option<String>,
-        /// New story type
+        display_name: Option<String>,
+        /// New system type
         #[arg(long, short = 't')]
-        story_type: Option<String>,
-        /// Set metadata field (can be used multiple times: --set narrator=John --set genre=fantasy)
+        system_type: Option<String>,
+        /// Set metadata field (can be used multiple times: --set complexity=high --set origin=ancient)
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },

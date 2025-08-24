@@ -10,7 +10,6 @@ pub fn init_character_tables(conn: &Connection) -> Result<()> {
             name TEXT PRIMARY KEY,
             display_name TEXT NOT NULL,
             metadata TEXT,
-            description TEXT,
             created_at TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'Active'
         )",
@@ -33,13 +32,12 @@ pub fn create_character(conn: &Connection, character: &Character) -> Result<()> 
         .context("Failed to serialize character metadata")?;
     
     conn.execute(
-        "INSERT INTO characters (name, display_name, metadata, description, created_at, status) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        "INSERT INTO characters (name, display_name, metadata, created_at, status) 
+         VALUES (?1, ?2, ?3, ?4, ?5)",
         params![
             character.name,
             character.display_name,
             metadata_json,
-            character.description,
             character.created_at.to_rfc3339(),
             status_str
         ],
@@ -51,14 +49,14 @@ pub fn create_character(conn: &Connection, character: &Character) -> Result<()> 
 /// List all characters
 pub fn list_characters(conn: &Connection) -> Result<Vec<Character>> {
     let mut stmt = conn.prepare(
-        "SELECT name, display_name, metadata, description, created_at, status 
+        "SELECT name, display_name, metadata, created_at, status 
          FROM characters ORDER BY created_at DESC"
     )?;
     
     let character_iter = stmt.query_map([], |row| {
         let metadata_str: String = row.get(2)?;
-        let status_str: String = row.get(5)?;
-        let created_at_str: String = row.get(4)?;
+        let status_str: String = row.get(4)?;
+        let created_at_str: String = row.get(3)?;
         
         let status = match status_str.as_str() {
             "Active" => CharacterStatus::Active,
@@ -69,7 +67,7 @@ pub fn list_characters(conn: &Connection) -> Result<Vec<Character>> {
         };
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|_e| rusqlite::Error::InvalidColumnType(4, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_e| rusqlite::Error::InvalidColumnType(3, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
             
         let metadata: std::collections::HashMap<String, serde_json::Value> = 
@@ -80,7 +78,6 @@ pub fn list_characters(conn: &Connection) -> Result<Vec<Character>> {
             name: row.get(0)?,
             display_name: row.get(1)?,
             metadata,
-            description: row.get(3)?,
             created_at,
             status,
         })
@@ -97,14 +94,14 @@ pub fn list_characters(conn: &Connection) -> Result<Vec<Character>> {
 /// Get a specific character by name
 pub fn get_character(conn: &Connection, name: &str) -> Result<Option<Character>> {
     let mut stmt = conn.prepare(
-        "SELECT name, display_name, metadata, description, created_at, status 
+        "SELECT name, display_name, metadata, created_at, status 
          FROM characters WHERE name = ?1"
     )?;
     
     let mut rows = stmt.query_map([name], |row| {
         let metadata_str: String = row.get(2)?;
-        let status_str: String = row.get(5)?;
-        let created_at_str: String = row.get(4)?;
+        let status_str: String = row.get(4)?;
+        let created_at_str: String = row.get(3)?;
         
         let status = match status_str.as_str() {
             "Active" => CharacterStatus::Active,
@@ -115,7 +112,7 @@ pub fn get_character(conn: &Connection, name: &str) -> Result<Option<Character>>
         };
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|_e| rusqlite::Error::InvalidColumnType(4, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_e| rusqlite::Error::InvalidColumnType(3, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
             
         let metadata: std::collections::HashMap<String, serde_json::Value> = 
@@ -126,7 +123,6 @@ pub fn get_character(conn: &Connection, name: &str) -> Result<Option<Character>>
             name: row.get(0)?,
             display_name: row.get(1)?,
             metadata,
-            description: row.get(3)?,
             created_at,
             status,
         })
@@ -143,6 +139,31 @@ pub fn delete_character(conn: &Connection, name: &str) -> Result<()> {
     conn.execute("DELETE FROM characters WHERE name = ?1", [name])
         .context("Failed to delete character")?;
     
+    Ok(())
+}
+
+/// Update an existing character
+pub fn update_character(conn: &Connection, character: &Character) -> Result<()> {
+    let status_str = match character.status {
+        CharacterStatus::Active => "Active",
+        CharacterStatus::Inactive => "Inactive",
+        CharacterStatus::Deceased => "Deceased",
+        CharacterStatus::Archived => "Archived",
+    };
+
+    let metadata_json = serde_json::to_string(&character.metadata)
+        .context("Failed to serialize character metadata")?;
+
+    conn.execute(
+        "UPDATE characters SET display_name = ?1, metadata = ?2, status = ?3 WHERE name = ?4",
+        params![
+            character.display_name,
+            metadata_json,
+            status_str,
+            character.name
+        ],
+    ).context("Failed to update character")?;
+
     Ok(())
 }
 

@@ -11,7 +11,22 @@ pub fn handle_story_command(command: StoryCommands) -> Result<()> {
         StoryCommands::List => handle_list(),
         StoryCommands::Info { name } => handle_info(name),
         StoryCommands::Delete { name, force } => handle_delete(name, force),
+        StoryCommands::Update { name, title, story_type, set } => handle_update(name, title, story_type, set),
     }
+}
+
+fn handle_update(name: String, title: Option<String>, story_type: Option<String>, set_args: Vec<(String, String)>) -> Result<()> {
+    println!("🔄 Updating story '{name}'");
+
+    let mut story = Story::get(&name)?
+        .ok_or_else(|| anyhow::anyhow!("Story '{}' not found", name))?;
+
+    story.update(title, story_type, set_args)?;
+
+    println!("✅ Story '{}' updated!", name);
+    show_created_story(&story)?;
+
+    Ok(())
 }
 
 fn handle_create(name: String, title: String, story_type: String, set_args: Vec<(String, String)>) -> Result<()> {
@@ -134,8 +149,8 @@ fn handle_list() -> Result<()> {
             println!("      by {}", author.as_str().unwrap_or("Unknown"));
         }
         
-        if let Some(desc) = &story.description {
-            println!("      {desc}");
+        if let Some(desc) = story.metadata.get("description") {
+            println!("      {}", desc.as_str().unwrap_or(""));
         }
     }
     
@@ -151,8 +166,8 @@ fn handle_info(name: String) -> Result<()> {
     println!("   Status: {:?}", story.status);
     println!("   Created: {}", story.created_at.format("%Y-%m-%d %H:%M"));
     
-    if let Some(desc) = &story.description {
-        println!("   Description: {desc}");
+    if let Some(desc) = story.metadata.get("description") {
+        println!("   Description: {}", desc.as_str().unwrap_or(""));
     }
     
     // Show metadata

@@ -8,7 +8,6 @@ pub struct Story {
     pub title: String,
     pub story_type: String,
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
-    pub description: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub status: StoryStatus,
 }
@@ -54,7 +53,6 @@ impl Story {
             title,
             story_type,
             metadata,
-            description: None,
             created_at: chrono::Utc::now(),
             status: StoryStatus::Active,
         }
@@ -135,6 +133,24 @@ impl Story {
         
         Ok(())
     }
+
+    pub fn update(&mut self, title: Option<String>, story_type: Option<String>, set_args: Vec<(String, String)>) -> anyhow::Result<()> {
+        if let Some(title) = title {
+            self.title = title;
+        }
+
+        if let Some(story_type) = story_type {
+            self.story_type = story_type;
+        }
+
+        for (key, value) in set_args {
+            self.metadata.insert(key, serde_json::Value::String(value));
+        }
+
+        self.update_in_database()?;
+
+        Ok(())
+    }
 }
 
 // Private utility functions
@@ -176,6 +192,14 @@ impl Story {
         let conn = Self::get_database_connection()?;
         super::database::create_story(&conn, self)
             .context("Failed to save story to database")
+    }
+
+    fn update_in_database(&self) -> anyhow::Result<()> {
+        use anyhow::Context;
+
+        let conn = Self::get_database_connection()?;
+        super::database::update_story(&conn, self)
+            .context("Failed to update story in database")
     }
 
     fn delete_from_database(&self) -> anyhow::Result<()> {

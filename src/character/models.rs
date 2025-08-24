@@ -6,7 +6,6 @@ pub struct Character {
     pub name: String,
     pub display_name: String,
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
-    pub description: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub status: CharacterStatus,
 }
@@ -45,7 +44,6 @@ impl Character {
             name,
             display_name,
             metadata,
-            description: None,
             created_at: chrono::Utc::now(),
             status: CharacterStatus::Active,
         }
@@ -95,6 +93,24 @@ impl Character {
         
         Ok(())
     }
+
+    pub fn update(&mut self, display_name: Option<String>, status: Option<String>, set_args: Vec<(String, String)>) -> anyhow::Result<()> {
+        if let Some(display_name) = display_name {
+            self.display_name = display_name;
+        }
+
+        if let Some(status_str) = status {
+            self.status = serde_json::from_str(&format!("\"{}\"", status_str)).unwrap_or_default();
+        }
+
+        for (key, value) in set_args {
+            self.metadata.insert(key, serde_json::Value::String(value));
+        }
+
+        self.update_in_database()?;
+
+        Ok(())
+    }
 }
 
 // Private utility functions
@@ -127,6 +143,14 @@ impl Character {
         let conn = Self::get_database_connection()?;
         super::database::create_character(&conn, self)
             .context("Failed to save character to database")
+    }
+
+    fn update_in_database(&self) -> anyhow::Result<()> {
+        use anyhow::Context;
+
+        let conn = Self::get_database_connection()?;
+        super::database::update_character(&conn, self)
+            .context("Failed to update character in database")
     }
 
     fn delete_from_database(&self) -> anyhow::Result<()> {

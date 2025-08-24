@@ -31,6 +31,21 @@ pub enum CharacterCommands {
         #[arg(long)]
         force: bool,
     },
+
+    /// Update an existing character
+    Update {
+        /// Character name
+        name: String,
+        /// New character display name
+        #[arg(long)]
+        display_name: Option<String>,
+        /// New character status
+        #[arg(long)]
+        status: Option<String>,
+        /// Set metadata field (can be used multiple times: --set age=25 --set description="..." --set faction=rebels)
+        #[arg(long, value_parser = parse_key_val)]
+        set: Vec<(String, String)>,
+    },
 }
 
 /// Parse a single key-value pair for --set flag

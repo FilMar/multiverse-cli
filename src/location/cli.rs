@@ -9,10 +9,7 @@ pub enum LocationCommands {
         /// Location display name (human-readable name)
         #[arg(long)]
         display_name: String,
-        /// Location type (city, building, region, etc.)
-        #[arg(long, short = 't')]
-        location_type: String,
-        /// Set metadata field (can be used multiple times: --set population=1000 --set climate=temperate)
+        /// Set metadata field (can be used multiple times: --set type=city --set population=1000 --set description="...")
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },
@@ -33,6 +30,18 @@ pub enum LocationCommands {
         /// Skip confirmation prompt
         #[arg(long)]
         force: bool,
+    },
+
+    /// Update an existing location
+    Update {
+        /// Location name
+        name: String,
+        /// New location display name
+        #[arg(long)]
+        display_name: Option<String>,
+        /// Set metadata field (can be used multiple times: --set type=city --set population=1000 --set description="...")
+        #[arg(long, value_parser = parse_key_val)]
+        set: Vec<(String, String)>,
     },
 }
 

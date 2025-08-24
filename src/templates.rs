@@ -1,170 +1,202 @@
 
-pub const EXTRACTION_GUIDE: &str = r##"
-# LLM Extraction Guide - Multiverse CLI Onboarding
+pub const EXTRACTION_GUIDE: &str = r##"# Guida all'Estrazione e Preparazione del Mondo per Multiverse CLI
 
-## Situazione
-Questo progetto contiene un mondo narrativo esistente che deve essere processato per l'uso con Multiverse CLI. Il sistema di gestione è già stato inizializzato, ma i contenuti esistenti devono essere analizzati e importati nel database.
+**Obiettivo**: Configurare un nuovo progetto Multiverse e importare una base di conoscenza testuale (file Markdown) estraendo entità di worldbuilding (personaggi, luoghi, etc.), convertendole in file `.sql` pronti per l'importazione.
 
-## Il tuo compito
-Analizza tutti i file di contenuto narrativo in questo progetto e genera i file SQL necessari per popolare il database della CLI.
+## Workflow Generale
 
-## Processo step-by-step
+1.  **Configura il Mondo**: Imposta i dettagli base del mondo nel file `.multiverse/config.toml`.
+2.  **Configura la Timeline**: Se il mondo ha un calendario personalizzato, crea e configura il file `.multiverse/timeline.toml`.
+3.  **Estrai Entità in SQL**: Analizza i file `.md`, estrai le entità e convertile in istruzioni `INSERT` SQL, salvandole in file numerati nella cartella `sql/`.
 
-### 1. ANALISI CONFIGURAZIONE MONDO
-- Esamina i file esistenti per comprendere l'identità del mondo narrativo
-- Se necessario, suggerisci aggiornamenti al file `.multiverse/config.toml`
-- Determina l'estetica generale e il formato di numerazione preferito
+---
 
-**Domande da fare all'utente:**
-- "Qual è il nome principale di questo mondo narrativo?"
-- "Quale estetica rappresenta meglio questo mondo? (fantasy, moderna, storica, cyberpunk, etc.)"
-- "Preferisci numerazione 001, 1, o formato romano I?"
+## Passo 1: Configurazione del Mondo (`config.toml`)
 
-### 2. SCANSIONE E CLASSIFICAZIONE STORIE
-Cerca directory e file che rappresentano serie narrative distinte.
+Prima di tutto, devi configurare le informazioni di base del mondo.
 
-**Per ogni serie trovata, determina:**
-- **Nome serie**: Nome identificativo (es. "fenrik_mealor", "lettere_lyra")
-- **Titolo**: Titolo leggibile per la storia
-- **Narratore**: Chi scrive/racconta la storia (da inserire nei metadati)
-- **Tipo**: "diary" (con firma F.M.) o "extra" (senza firma F.M.)
-- **Descrizione**: Breve descrizione della serie
+**Azione**: Chiedi all'utente il nome del mondo e una sua breve descrizione.
 
-**Domande da fare all'utente per ogni serie:**
-- "Qual è il titolo della serie '{}'?"
-- "Chi è il narratore principale di questa serie?"
-- "Come descriveresti brevemente questa serie?"
-- "Qual è lo stato attuale? (Active, Paused, Completed, Archived)"
+**Esempio di interazione**:
+> Utente: "Iniziamo a importare il mio mondo, Aethel."
+> Tu: "Perfetto. Potresti darmi una breve descrizione di Aethel?"
+> Utente: "È un mondo fantasy dark, post-apocalittico, dove la magia sta morendo."
 
-### 3. ANALISI EPISODI
-Per ogni file di episodio (.md) trovato nelle serie:
+Una volta ottenute le informazioni, usa i seguenti comandi per aggiornare la configurazione:
 
-**Estrai automaticamente:**
-- **Numero episodio**: Dal nome file (001.md → 1)
-- **Contenuto**: Leggi il file per analisi
-
-**Determina dal contenuto:**
-- **Titolo**: Cerca patterns come "# Titolo", prime righe significative, o riferimenti nel testo
-- **Personaggi menzionati**: Nomi propri che ricorrono
-- **Luoghi visitati**: Riferimenti geografici
-- **Eventi temporali**: Date, età, riferimenti temporali
-
-**Domande da fare all'utente per ogni episodio:**
-- "Il titolo che ho estratto '{}' è corretto per l'episodio {}?"
-- "Qual è lo stato attuale di questo episodio? (Draft, InProgress, Review, Published)"
-- "Hai una stima del numero di parole per questo episodio?"
-
-### 4. IDENTIFICAZIONE PERSONAGGI
-Per ogni personaggio unico identificato negli episodi:
-
-**Raccogli informazioni dal testo:**
-- **Nome completo**
-- **Episodi in cui appare**
-- **Azioni/comportamenti descritti**
-- **Relazioni con altri personaggi**
-
-**Domande da fare all'utente per ogni personaggio:**
-- "Che razza/specie è '{}'? (umano, elfo, etc.)"
-- "Che età ha approssimativamente?"
-- "Ha abilità magiche? Se sì, quali?"
-- "Ha limitazioni specifiche? (es. non può lanciare incantesimi)"
-- "Qual è la sua professione o ruolo?"
-- "Note aggiuntive sul personaggio?"
-
-### 5. IDENTIFICAZIONE LUOGHI
-Per ogni luogo unico identificato negli episodi:
-
-**Raccogli informazioni dal testo:**
-- **Nome del luogo**
-- **Contesto geografico**
-- **Episodi in cui viene visitato**
-- **Caratteristiche descritte**
-
-**Domande da fare all'utente per ogni luogo:**
-- "Che tipo di luogo è '{}'? (città, edificio_pubblico, regno, etc.)"
-- "Fa parte di una località più grande? Quale?"
-- "Che caratteristiche speciali ha questo luogo?"
-- "Qual è lo stato attuale? (attiva, distrutta, abbandonata)"
-- "Note aggiuntive sul luogo?"
-
-## Generazione File SQL
-
-Dopo aver raccolto tutte le informazioni, crea i seguenti file nella directory `sql/`:
-
-### sql/01_stories.sql
-```sql
--- Serie narrative identificate
-INSERT INTO stories (name, title, story_type, metadata, description, created_at, status) VALUES
-('serie_nome', 'Titolo Storia', 'diary', '{"narrator":"Nome Narratore"}', 'Descrizione serie', datetime('now'), 'Active');
--- ... altre serie
+```bash
+multiverse world config --set world.name --value "Aethel"
+multiverse world config --set world.description --value "Un mondo fantasy dark, post-apocalittico, dove la magia sta morendo."
 ```
 
-### sql/02_episodes.sql  
-```sql
--- Episodi per ogni serie
-INSERT INTO episodes (story_name, episode_number, title, status, word_count, created_at, updated_at) VALUES
-('serie_nome', 1, 'Titolo Episodio', 'Published', 1500, datetime('now'), datetime('now'));
--- ... altri episodi
+---
+
+## Passo 2: Configurazione della Timeline (`timeline.toml`)
+
+Ora, determina se il mondo usa un calendario standard o uno personalizzato.
+
+**Azione**: Chiedi all'utente che tipo di calendario usa il mondo.
+
+**Esempio di interazione**:
+> Tu: "Il tuo mondo, Aethel, usa un calendario standard (Gregoriano, come il nostro) o ne ha uno personalizzato (con mesi, ere e nomi dei giorni specifici)?"
+
+-   **Caso A: Calendario Standard**: Se l'utente risponde "standard", "reale", o simile, **non fare nulla**. Salta questo passo e procedi al Passo 3. Il sistema userà le date standard.
+
+-   **Caso B: Calendario Personalizzato**: Se l'utente conferma di avere un calendario personalizzato, devi creare il file `.multiverse/timeline.toml`.
+
+    **Azione**: Chiedi all'utente i dettagli del suo calendario (o chiedigli di fornirti un file con le regole). Raccogli informazioni su:
+    - Nomi dei mesi e loro abbreviazioni.
+    - Numero di mesi all'anno e di giorni al mese/settimana.
+    - Nomi delle ere e l'anno in cui iniziano.
+    - Nomi dei "blocchi" del giorno (es. Mattina, Pomeriggio, Sera).
+
+    Usa queste informazioni per creare un file `.multiverse/timeline.toml` come segue.
+
+    **Esempio di `timeline.toml`**:
+    ```toml
+    # Anno di riferimento per l'inizio del conteggio assoluto
+    creation_year = 0
+
+    # Configurazione base del calendario
+    [calendar]
+    name = "Calendario Aetheleano"
+    year_name = "Ciclo"
+    year_days = 360
+    months_per_year = 12
+    days_per_month = 30
+    weeks_per_month = 3
+    week_name = "Decade"
+    days_per_week = 10
+    day_name = "Alba"
+
+    # Suddivisione della giornata
+    [day_structure]
+    blocks_per_day = 5
+    candles_per_block = 4
+
+    # Formato di visualizzazione delle date
+    [date_formats]
+    full = "{day_name} {penta}/{month} {year} {era}"
+    abbreviated = "{penta}A/{month_abbrev} {year} {era_abbrev}"
+
+    # Nomi e abbreviazioni dei blocchi del giorno
+    [day_blocks]
+    names = ["Crepuscolo", "Aurora", "Meriggio", "Vespro", "Notte"]
+    abbrevs = ["Cr", "Au", "Me", "Ve", "No"]
+    meanings = ["Prime ore del mattino", "Mattina", "Mezzogiorno", "Pomeriggio", "Notte"]
+
+    # Nomi e abbreviazioni dei mesi
+    [months]
+    names = ["Primus", "Secundus", "Tertius", "Quartus", "Quintus", "Sextus", "Septimus", "Octavus", "Nonus", "Decimus", "Undecimus", "Duodecimus"]
+    abbrevs = ["Pri", "Sec", "Ter", "Qua", "Qui", "Sex", "Sep", "Oct", "Non", "Dec", "Und", "Duo"]
+    meanings = ["Mese della semina", "Mese della crescita", ...]
+
+    # Definizione delle Ere
+    [era_events]
+    [era_events.diaspora]
+    name = "Diaspora"
+    abbrev = "DF" # Dopo la Frammentazione
+    year = 1200 # Anno assoluto in cui è iniziata la Diaspora
+
+    [era_events.foundation]
+    name = "Fondazione"
+    abbrev = "AF" # Anni della Fondazione
+    year = 0
+    ```
+
+---
+
+## Passo 3: Estrazione delle Entità in SQL
+
+Questo è il passo finale. Analizza i file di testo e converti le entità in istruzioni SQL.
+
+**Azione**: Leggi i file `.md`, identifica le entità, chiedi chiarimenti se necessario, e genera i file `.sql` nella cartella `sql/`.
+
+(Il resto della guida da qui in poi rimane come quella che hai generato in precedenza, con le istruzioni per `characters`, `locations`, `systems`, `factions`, `events`, la gestione delle informazioni mancanti e la struttura dei file SQL.)
+"##;
+
+pub const AI_COLAB: &str = r##"# Guida alla Collaborazione AI con Multiverse CLI
+
+**Obiettivo**: Questa guida ti spiega come usare i comandi di `multiverse-cli` per costruire e gestire un mondo narrativo in modo programmatico. Il tuo ruolo è tradurre le richieste dell'utente in comandi CLI per popolare il database del mondo.
+
+## Concetto Fondamentale: La CLI è la Fonte della Verità
+
+Tutta la conoscenza strutturata del mondo (chi sono i personaggi, dove si trovano i luoghi, etc.) deve essere gestita tramite comandi CLI. Non modificare mai direttamente il database. Usa i comandi per creare, aggiornare e interrogare il mondo.
+
+---
+
+## Gestione di Storie ed Episodi
+
+Le narrazioni sono organizzate in Storie, che contengono Episodi.
+
+1.  **Crea una Storia**: Una storia è un contenitore per una serie di eventi o narrazioni. Può avere metadati propri.
+    ```bash
+    multiverse story create le-cronache-di-aethel --type book --set genre=Fantasy --set author="Fenrik Mealor"
+    ```
+
+2.  **Crea un Episodio**: Un episodio è un singolo file `.md` dove scriverai il contenuto narrativo. La CLI gestisce la numerazione per te.
+    ```bash
+    multiverse episode create --story le-cronache-di-aethel --title "L'Alba della Rovina"
+    ```
+    Questo comando creerà un file come `stories/le-cronache-di-aethel/001.md`.
+
+---
+
+## Sincronizzazione: La Regola più Importante
+
+Dopo che hai scritto o modificato il contenuto di un file di episodio (`.md`), il tuo lavoro non è finito. Devi aggiornare il database con le nuove informazioni che hai introdotto.
+
+**Workflow Chiave**: Scrivi la storia -> Estrai le entità -> Aggiorna il database con la CLI.
+
+**Esempio**:
+
+1.  **Richiesta Utente**: "Nel nuovo episodio, Kaelen forgia una spada magica chiamata 'Luce Morente'."
+2.  **Azione 1: Scrivi nel File**: Apri il file `.md` dell'episodio e scrivi la scena.
+3.  **Azione 2: Estrai e Aggiorna**:
+    -   **Pensa**: "L'utente ha introdotto un nuovo 'sistema' (un oggetto magico). Devo aggiungerlo al database."
+    -   **Esegui il Comando**:
+        ```bash
+        multiverse system create luce_morente --display-name "Luce Morente" --type "Magic Item" --set creator=kaelen --set "first_appearance=le-cronache-di-aethel/001"
+        ```
+
+### Gestire le Relazioni Personaggio-Episodio (Workaround Attuale)
+
+**Attenzione**: Al momento, non esiste un comando diretto per collegare un personaggio a un episodio (es. `multiverse character episode add ...`). Questa funzionalità è prevista per il futuro.
+
+**Soluzione Temporanea**: Usa i metadati per registrare la partecipazione di un personaggio a un episodio. Aggiungi un campo `episodes` o `appearances` al personaggio.
+
+**Esempio**:
+> Se Kaelen appare nell'episodio 1 e 2, puoi aggiornare il suo profilo così:
+
+```bash
+# (Questo comando non esiste ancora, è un esempio di come potrebbe funzionare in futuro)
+# multiverse character update kaelen --set "episodes=['001', '002']"
+
+# Per ora, puoi solo aggiungere metadati alla creazione.
+# Quindi, quando crei un personaggio, puoi annotare la sua prima apparizione.
+multiverse character create kaelen --display-name "Kaelen" --set "first_appearance=le-cronache-di-aethel/001"
 ```
 
-### sql/03_characters.sql
-```sql
--- Personaggi identificati
-INSERT INTO characters (name, race, has_magic_abilities, abilities, limitations, age, origin, profession, notes) VALUES
-('Nome Personaggio', 'umano', 0, '[]', '["no_lancio_incantesimi"]', 45, 'Città Origine', 'Professione', 'Note aggiuntive');
--- ... altri personaggi
-```
+---
 
-### sql/04_locations.sql
-```sql
--- Luoghi identificati  
-INSERT INTO locations (name, type, parent_location_id, characteristics, status, notes) VALUES
-('Nome Luogo', 'città', NULL, '["caratteristica1", "caratteristica2"]', 'attiva', 'Note aggiuntive');
--- ... altri luoghi
-```
+## Comandi Essenziali per la Creazione
 
-### sql/05_relations.sql
-```sql
--- Relazioni episodi-personaggi-luoghi
-INSERT INTO episode_characters (episode_id, character_id) VALUES
-((SELECT id FROM episodes WHERE story_name='serie' AND episode_number=1), 
- (SELECT id FROM characters WHERE name='Nome Personaggio'));
+(Il resto della guida rimane invariato: Il Potere dei Metadati, Riferimenti ai Comandi, Esempio di Workflow, Leggere i Dati, Regole d'Oro)
 
-INSERT INTO episode_locations (episode_id, location_id) VALUES  
-((SELECT id FROM episodes WHERE story_name='serie' AND episode_number=1),
- (SELECT id FROM locations WHERE name='Nome Luogo'));
--- ... altre relazioni
-```
+### Il Potere dei Metadati con `--set`
 
-## Note importanti
+Il flag `--set` è il tuo strumento più potente. Ti permette di aggiungere qualsiasi dato strutturato a un'entità. La sintassi è `key=value`. Se il valore contiene spazi, usa le virgolette: `key="some value"`.
 
-### Formato dati JSON
-- **metadata**: Oggetto JSON `{"narrator":"Nome Narratore"}`
-- **abilities**: Array JSON di stringhe `["abilità1", "abilità2"]`
-- **limitations**: Array JSON di stringhe `["limitazione1", "limitazione2"]` 
-- **characteristics**: Array JSON di stringhe `["caratteristica1", "caratteristica2"]`
+-   **Personaggio**: `multiverse character create <id> --display-name <nome> --set <metadati>`
+-   **Luogo**: `multiverse location create <id> --display-name <nome> --type <tipo> --set <metadati>`
+-   **Sistema**: `multiverse system create <id> --display-name <nome> --type <tipo> --set <metadati>`
+-   **Fazione**: `multiverse faction create <id> --display-name <nome> --type <tipo> --set <metadati>`
+-   **Evento**: `multiverse event create <id> --display-name <nome> --type <tipo> --date <data> --set <metadati>`
 
-### Convenzioni nomi
-- **Serie**: snake_case (es. "fenrik_mealor", "lettere_lyra")
-- **Personaggi**: Nome Proprio normale (es. "Fenrik Mealor")
-- **Luoghi**: Nome Proprio normale (es. "Biblioteca di Cogland")
+## Regole d'Oro
 
-### Gestione ID
-- Usa subquery per i foreign key (come negli esempi relations.sql)
-- Non assumere ID specifici, sempre basarsi sui nomi
-
-## Workflow finale
-
-1. Crea tutti i file SQL nella directory `sql/`
-2. Verifica che non ci siano errori di sintassi
-3. Informa l'utente che può importare con: `multiverse world import --all`
-
-## Cosa fare se non riesci a determinare qualcosa
-
-Se durante l'analisi non riesci a determinare un'informazione:
-1. **Per configurazione mondo**: Chiedi esplicitamente all'utente
-2. **Per metadati episodi**: Usa valori ragionevoli di default e chiedi conferma
-3. **Per personaggi/luoghi**: Non inventare, chiedi sempre conferma all'utente
-
-Ricorda: è meglio chiedere troppo che assumere dati sbagliati!
+1.  **Verifica Prima di Creare**: Usa sempre `info` o `list` per evitare di creare duplicati.
+2.  **Chiedi per Chiarire**: Se una richiesta è ambigua, fai domande all'utente.
+3.  **Usa `--set` Generosamente**: Più metadati aggiungi, più ricco diventerà il mondo.
+4.  **Sincronizza Sempre**: Dopo aver scritto la lore, aggiorna i metadati con la CLI.
 "##;

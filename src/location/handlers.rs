@@ -4,19 +4,34 @@ use anyhow::Result;
 
 pub fn handle_location_command(command: LocationCommands) -> Result<()> {
     match command {
-        LocationCommands::Create { name, display_name, location_type, set } => {
-            handle_create(name, display_name, location_type, set)
+        LocationCommands::Create { name, display_name, set } => {
+            handle_create(name, display_name, set)
         }
         LocationCommands::List => handle_list(),
         LocationCommands::Info { name } => handle_info(name),
         LocationCommands::Delete { name, force } => handle_delete(name, force),
+        LocationCommands::Update { name, display_name, set } => handle_update(name, display_name, set),
     }
 }
 
-fn handle_create(name: String, display_name: String, location_type: String, set_args: Vec<(String, String)>) -> Result<()> {
+fn handle_update(name: String, display_name: Option<String>, set_args: Vec<(String, String)>) -> Result<()> {
+    println!("🔄 Updating location '{name}'");
+
+    let mut location = Location::get(&name)?
+        .ok_or_else(|| anyhow::anyhow!("Location '{}' not found", name))?;
+
+    location.update(display_name, set_args)?;
+
+    println!("✅ Location '{}' updated!", name);
+    show_created_location(&location)?;
+
+    Ok(())
+}
+
+fn handle_create(name: String, display_name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("🏛️  Creating location '{name}' ({display_name})");
     
-    let location = Location::create_new(name.clone(), display_name, location_type, set_args)?;
+    let location = Location::create_new(name.clone(), display_name, set_args)?;
     location.create()?;
     
     show_created_location(&location)?;
@@ -27,11 +42,14 @@ fn handle_create(name: String, display_name: String, location_type: String, set_
 fn show_created_location(location: &Location) -> Result<()> {
     println!("✅ Location '{}' created!", location.name);
     println!("   Display name: {}", location.display_name);
-    println!("   Type: {}", location.location_type);
     println!("   Status: {:?}", location.status);
     
-    if let Some(desc) = &location.description {
-        println!("   Description: {desc}");
+    if let Some(type_val) = location.metadata.get("type") {
+        println!("   Type: {}", type_val.as_str().unwrap_or("Unknown"));
+    }
+    
+    if let Some(desc) = location.metadata.get("description") {
+        println!("   Description: {}", desc.as_str().unwrap_or(""));
     }
     
     // Show metadata
@@ -64,11 +82,15 @@ fn handle_list() -> Result<()> {
             LocationStatus::Archived => "📦",
         };
         
+        let type_str = location.metadata.get("type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+            
         println!("   {} {} - \"{}\" ({})", 
             status_emoji, 
             location.name, 
             location.display_name,
-            location.location_type
+            type_str
         );
         
         // Show key metadata fields
@@ -79,8 +101,8 @@ fn handle_list() -> Result<()> {
             println!("      Climate: {}", climate.as_str().unwrap_or("Unknown"));
         }
         
-        if let Some(desc) = &location.description {
-            println!("      {desc}");
+        if let Some(desc) = location.metadata.get("description") {
+            println!("      {}", desc.as_str().unwrap_or(""));
         }
     }
     
@@ -92,12 +114,16 @@ fn handle_info(name: String) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Location '{}' not found", name))?;
     
     println!("🏛️  Location: {} - \"{}\"", location.name, location.display_name);
-    println!("   Type: {}", location.location_type);
+    
+    if let Some(type_val) = location.metadata.get("type") {
+        println!("   Type: {}", type_val.as_str().unwrap_or("Unknown"));
+    }
+    
     println!("   Status: {:?}", location.status);
     println!("   Created: {}", location.created_at.format("%Y-%m-%d %H:%M"));
     
-    if let Some(desc) = &location.description {
-        println!("   Description: {desc}");
+    if let Some(desc) = location.metadata.get("description") {
+        println!("   Description: {}", desc.as_str().unwrap_or(""));
     }
     
     // Show metadata

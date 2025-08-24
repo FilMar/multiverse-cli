@@ -12,7 +12,6 @@ pub fn init_story_tables(conn: &Connection) -> Result<()> {
             title TEXT NOT NULL,
             story_type TEXT NOT NULL,
             metadata TEXT,
-            description TEXT,
             created_at TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'Active'
         )",
@@ -52,14 +51,13 @@ pub fn create_story(conn: &Connection, story: &Story) -> Result<()> {
         .context("Failed to serialize story metadata")?;
     
     conn.execute(
-        "INSERT INTO stories (name, title, story_type, metadata, description, created_at, status) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO stories (name, title, story_type, metadata, created_at, status) 
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![
             story.name,
             story.title,
             story.story_type,
             metadata_json,
-            story.description,
             story.created_at.to_rfc3339(),
             status_str
         ],
@@ -71,15 +69,15 @@ pub fn create_story(conn: &Connection, story: &Story) -> Result<()> {
 /// List all stories
 pub fn list_stories(conn: &Connection) -> Result<Vec<Story>> {
     let mut stmt = conn.prepare(
-        "SELECT name, title, story_type, metadata, description, created_at, status 
+        "SELECT name, title, story_type, metadata, created_at, status 
          FROM stories ORDER BY created_at DESC"
     )?;
     
     let story_iter = stmt.query_map([], |row| {
         let story_type_str: String = row.get(2)?;
         let metadata_str: String = row.get(3)?;
-        let status_str: String = row.get(6)?;
-        let created_at_str: String = row.get(5)?;
+        let status_str: String = row.get(5)?;
+        let created_at_str: String = row.get(4)?;
         
         let status = match status_str.as_str() {
             "Active" => StoryStatus::Active,
@@ -90,7 +88,7 @@ pub fn list_stories(conn: &Connection) -> Result<Vec<Story>> {
         };
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|_e| rusqlite::Error::InvalidColumnType(5, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_e| rusqlite::Error::InvalidColumnType(4, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
             
         let metadata: std::collections::HashMap<String, serde_json::Value> = 
@@ -102,7 +100,6 @@ pub fn list_stories(conn: &Connection) -> Result<Vec<Story>> {
             title: row.get(1)?,
             story_type: story_type_str,
             metadata,
-            description: row.get(4)?,
             created_at,
             status,
         })
@@ -119,15 +116,15 @@ pub fn list_stories(conn: &Connection) -> Result<Vec<Story>> {
 /// Get a specific story by name
 pub fn get_story(conn: &Connection, name: &str) -> Result<Option<Story>> {
     let mut stmt = conn.prepare(
-        "SELECT name, title, story_type, metadata, description, created_at, status 
+        "SELECT name, title, story_type, metadata, created_at, status 
          FROM stories WHERE name = ?1"
     )?;
     
     let mut rows = stmt.query_map([name], |row| {
         let story_type_str: String = row.get(2)?;
         let metadata_str: String = row.get(3)?;
-        let status_str: String = row.get(6)?;
-        let created_at_str: String = row.get(5)?;
+        let status_str: String = row.get(5)?;
+        let created_at_str: String = row.get(4)?;
         
         let status = match status_str.as_str() {
             "Active" => StoryStatus::Active,
@@ -138,7 +135,7 @@ pub fn get_story(conn: &Connection, name: &str) -> Result<Option<Story>> {
         };
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|_e| rusqlite::Error::InvalidColumnType(5, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_e| rusqlite::Error::InvalidColumnType(4, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&chrono::Utc);
             
         let metadata: std::collections::HashMap<String, serde_json::Value> = 
@@ -150,7 +147,6 @@ pub fn get_story(conn: &Connection, name: &str) -> Result<Option<Story>> {
             title: row.get(1)?,
             story_type: story_type_str,
             metadata,
-            description: row.get(4)?,
             created_at,
             status,
         })
@@ -169,6 +165,35 @@ pub fn delete_story(conn: &Connection, name: &str) -> Result<()> {
     
     Ok(())
 }
+
+/// Update an existing story
+pub fn update_story(conn: &Connection, story: &Story) -> Result<()> {
+    let status_str = match story.status {
+        StoryStatus::Active => "Active",
+        StoryStatus::Paused => "Paused",
+        StoryStatus::Completed => "Completed",
+        StoryStatus::Archived => "Archived",
+    };
+
+    let metadata_json = serde_json::to_string(&story.metadata)
+        .context("Failed to serialize story metadata")?;
+
+    conn.execute(
+        "UPDATE stories SET title = ?1, story_type = ?2, metadata = ?3, status = ?4 WHERE name = ?5",
+        params![
+            story.title,
+            story.story_type,
+            metadata_json,
+            status_str,
+            story.name
+        ],
+    ).context("Failed to update story")?;
+
+    Ok(())
+}
+
+// Episodes functions remain the same...
+// [Rest of episode functions continue as before]
 
 /// Create a new episode
 pub fn create_episode(conn: &Connection, episode: &Episode) -> Result<()> {
@@ -297,6 +322,30 @@ pub fn delete_episode(conn: &Connection, story_name: &str, episode_number: i32) 
         params![story_name, episode_number]
     ).context("Failed to delete episode")?;
     
+    Ok(())
+}
+
+/// Update an existing episode
+pub fn update_episode(conn: &Connection, episode: &Episode) -> Result<()> {
+    let status_str = match episode.status {
+        EpisodeStatus::Draft => "Draft",
+        EpisodeStatus::InProgress => "InProgress",
+        EpisodeStatus::Review => "Review",
+        EpisodeStatus::Published => "Published",
+    };
+
+    conn.execute(
+        "UPDATE episodes SET title = ?1, status = ?2, word_count = ?3, updated_at = ?4 WHERE story_name = ?5 AND episode_number = ?6",
+        params![
+            episode.title,
+            status_str,
+            episode.word_count,
+            episode.updated_at.to_rfc3339(),
+            episode.story_name,
+            episode.episode_number
+        ],
+    ).context("Failed to update episode")?;
+
     Ok(())
 }
 
