@@ -16,13 +16,6 @@ multiverse episode create/list/info/delete
 multiverse info
 ```
 
-**Database Schema:**
-```sql
--- ONLY these tables exist:
-CREATE TABLE stories (name, title, story_type, metadata, description, created_at, status);
-CREATE TABLE episodes (id, story_name, episode_number, title, status, word_count, created_at, updated_at);
-```
-
 **Core Systems:**
 - ✅ SQLite database with flexible story metadata (JSON)
 - ✅ Story types configurable via TOML

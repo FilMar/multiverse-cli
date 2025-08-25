@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::{story::{StoryCommands, EpisodeCommands}, character::CharacterCommands, location::LocationCommands, system::SystemCommands, faction::FactionCommands, event::EventCommands, world::WorldCommands, race::RaceCommands};
+use crate::{story::{StoryCommands, EpisodeCommands}, character::CharacterCommands, location::LocationCommands, system::SystemCommands, faction::FactionCommands, event::EventCommands, world::WorldCommands, race::RaceCommands, timeline::TimelineCommands, relations::RelationCommands};
 
 #[derive(Parser)]
 #[command(name = "multiverse")]
@@ -64,6 +64,18 @@ pub enum Commands {
     Race {
         #[command(subcommand)]
         command: RaceCommands,
+    },
+
+    /// Manage timeline configuration and dates (requires being in a multiverse project)
+    Timeline {
+        #[command(subcommand)]
+        command: TimelineCommands,
+    },
+
+    /// Manage relations between entities (requires being in a multiverse project)
+    Relation {
+        #[command(subcommand)]
+        command: RelationCommands,
     },
     
     /// Show project information

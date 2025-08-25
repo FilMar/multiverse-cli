@@ -43,11 +43,6 @@ fn show_created_character(character: &Character) -> Result<()> {
     println!("✅ Character '{}' created!", character.name);
     println!("   Display name: {}", character.display_name);
     println!("   Status: {:?}", character.status);
-    
-    if let Some(desc) = character.metadata.get("description") {
-        println!("   Description: {}", desc.as_str().unwrap_or(""));
-    }
-    
     // Show metadata
     if !character.metadata.is_empty() {
         println!("   Metadata:");
@@ -77,13 +72,11 @@ fn handle_list() -> Result<()> {
             CharacterStatus::Deceased => "💀",
             CharacterStatus::Archived => "📦",
         };
-        
         println!("   {} {} - \"{}\"", 
             status_emoji, 
             character.name, 
             character.display_name
         );
-        
         // Show key metadata fields
         if let Some(age) = character.metadata.get("age") {
             println!("      Age: {}", age.as_str().unwrap_or("Unknown"));
@@ -91,27 +84,22 @@ fn handle_list() -> Result<()> {
         if let Some(faction) = character.metadata.get("faction") {
             println!("      Faction: {}", faction.as_str().unwrap_or("Unknown"));
         }
-        
         if let Some(desc) = character.metadata.get("description") {
             println!("      {}", desc.as_str().unwrap_or(""));
         }
     }
-    
     Ok(())
 }
 
 fn handle_info(name: String) -> Result<()> {
     let character = Character::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Character '{}' not found", name))?;
-    
     println!("👤 Character: {} - \"{}\"", character.name, character.display_name);
     println!("   Status: {:?}", character.status);
     println!("   Created: {}", character.created_at.format("%Y-%m-%d %H:%M"));
-    
     if let Some(desc) = character.metadata.get("description") {
         println!("   Description: {}", desc.as_str().unwrap_or(""));
     }
-    
     // Show metadata
     if !character.metadata.is_empty() {
         println!("   Metadata:");
@@ -119,10 +107,8 @@ fn handle_info(name: String) -> Result<()> {
             println!("     {}: {}", key, value);
         }
     }
-    
     // TODO: Show episodes where character appears with roles
     println!("   Episodes: (to be implemented)");
-    
     Ok(())
 }
 

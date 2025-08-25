@@ -7,6 +7,7 @@ pub mod system;
 pub mod faction;
 pub mod event;
 pub mod timeline;
+pub mod relations;
 pub mod race;
 pub mod templates;
 
