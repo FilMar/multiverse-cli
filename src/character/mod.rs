@@ -1,6 +1,5 @@
 pub mod models;
 pub mod database;
-pub mod episode_relations;
 pub mod cli;
 pub mod handlers;
 
