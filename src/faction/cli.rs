@@ -6,13 +6,7 @@ pub enum FactionCommands {
     Create {
         /// Faction name (unique identifier)
         name: String,
-        /// Faction display name (human-readable name)
-        #[arg(long)]
-        display_name: String,
-        /// Faction type (government, guild, religion, military, etc.)
-        #[arg(long, short = 't')]
-        faction_type: String,
-        /// Set metadata field (can be used multiple times: --set size=large --set alignment=neutral)
+        /// Set metadata field (can be used multiple times: --set title="Faction Name" --set type=government)
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },
@@ -39,13 +33,7 @@ pub enum FactionCommands {
     Update {
         /// Faction name
         name: String,
-        /// New faction display name
-        #[arg(long)]
-        display_name: Option<String>,
-        /// New faction type
-        #[arg(long, short = 't')]
-        faction_type: Option<String>,
-        /// Set metadata field (can be used multiple times: --set size=large --set alignment=neutral)
+        /// Set metadata field (can be used multiple times: --set title="New Name" --set type=military)
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },

@@ -28,12 +28,26 @@ fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     Ok(())
 }
 
-fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
-    println!("🏛️  Creating location '{name}'");
+fn handle_create(name: String, mut set_args: Vec<(String, String)>) -> Result<()> {
+    let title = set_args.iter()
+        .find(|(k, _)| k == "title" || k == "display_name")
+        .map(|(_, v)| v.as_str())
+        .unwrap_or(&name);
     
-    let location = Location::create_new(name.clone(), set_args)?;
+    println!("📍 Creating location '{name}' ({})", title);
+
+    // Normalize field names: title -> display_name
+    for (key, _) in &mut set_args {
+        if key == "title" {
+            *key = "display_name".to_string();
+        }
+    }
+
+    // Use Location factory method with built-in validation
+    let mut location = Location::create_new(name.clone(), set_args)?;
     location.create()?;
     
+    // Display success information
     show_created_location(&location)?;
     
     Ok(())
@@ -41,16 +55,8 @@ fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
 
 fn show_created_location(location: &Location) -> Result<()> {
     println!("✅ Location '{}' created!", location.name);
-    println!("   Display name: {}", location.display_name);
+    println!("   Title: {}", location.display_name);
     println!("   Status: {:?}", location.status);
-    
-    if let Some(type_val) = location.metadata.get("type") {
-        println!("   Type: {}", type_val.as_str().unwrap_or("Unknown"));
-    }
-    
-    if let Some(desc) = location.metadata.get("description") {
-        println!("   Description: {}", desc.as_str().unwrap_or(""));
-    }
     
     // Show metadata
     if !location.metadata.is_empty() {
@@ -77,9 +83,10 @@ fn handle_list() -> Result<()> {
     for location in locations {
         let status_emoji = match location.status {
             LocationStatus::Active => "🟢",
-            LocationStatus::Destroyed => "💥",
-            LocationStatus::Abandoned => "🏚️",
-            LocationStatus::Archived => "📦",
+            LocationStatus::Inactive => "⚫",
+            LocationStatus::Destroyed => "💥", 
+            LocationStatus::Hidden => "👻",
+            LocationStatus::Unknown => "❓",
         };
         
         let type_str = location.metadata.get("type")
@@ -146,7 +153,7 @@ fn handle_delete(name: String, force: bool) -> Result<()> {
     
     if !force {
         println!("⚠️  Are you sure you want to delete location '{name}'?");
-        println!("   This will permanently delete the location and remove it from all episodes");
+        println!("   This will permanently delete the location from database");
         println!("   Use --force to skip this confirmation");
         return Ok(());
     }

@@ -3,13 +3,14 @@ use crate::{
     character::CharacterCommands,
     world::WorldCommands, 
     timeline::TimelineCommands,
-    story::StoryCommands
-    // TODO: Re-enable as we implement them:
-    // episode::EpisodeCommands, 
-    // location::LocationCommands, 
+    story::StoryCommands,
+    episode::EpisodeCommands,
+    location::LocationCommands,
+    event::EventCommands,
+    faction::FactionCommands
+    // TODO: Re-enable as we implement them: 
     // system::SystemCommands, 
-    // faction::FactionCommands, 
-    // event::EventCommands, 
+ 
     // race::RaceCommands
 };
 
@@ -41,19 +42,28 @@ pub enum Commands {
         #[command(subcommand)]
         command: StoryCommands,
     },
-   // 
-   // /// Manage episodes (requires being in a multiverse project)
-   // Episode {
-   //     #[command(subcommand)]
-   //     command: EpisodeCommands,
-   // },
-   // 
-   // 
-   // /// Manage locations (requires being in a multiverse project)
-   // Location {
-   //     #[command(subcommand)]
-   //     command: LocationCommands,
-   // },
+    Episode {
+        #[command(subcommand)]
+        command: EpisodeCommands,
+    },
+   
+   /// Manage locations (requires being in a multiverse project)
+   Location {
+       #[command(subcommand)]
+       command: LocationCommands,
+   },
+   
+   /// Manage events (requires being in a multiverse project)
+   Event {
+       #[command(subcommand)]
+       command: EventCommands,
+   },
+   
+   /// Manage factions (requires being in a multiverse project)
+   Faction {
+       #[command(subcommand)]
+       command: FactionCommands,
+   },
    // 
    // /// Manage systems (requires being in a multiverse project)
    // System {

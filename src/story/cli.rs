@@ -6,13 +6,7 @@ pub enum StoryCommands {
     Create {
         /// Story name (used for directory naming)
         name: String,
-        /// Story title (human-readable title)
-        #[arg(long)]
-        title: String,
-        /// Story type (diary, book, etc.)
-        #[arg(long, short = 't')]
-        story_type: String,
-        /// Set metadata field (can be used multiple times: --set narrator=John --set genre=fantasy)
+        /// Set metadata field (can be used multiple times: --set title="Story Title" --set type=fantasy --set author=John)
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },
@@ -42,13 +36,7 @@ pub enum StoryCommands {
     Update {
         /// Story name
         name: String,
-        /// New story title
-        #[arg(long)]
-        title: Option<String>,
-        /// New story type
-        #[arg(long, short = 't')]
-        story_type: Option<String>,
-        /// Set metadata field (can be used multiple times: --set narrator=John --set genre=fantasy)
+        /// Set metadata field (can be used multiple times: --set title="New Title" --set type=fantasy --set author=John)
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },

@@ -15,11 +15,11 @@ fn main() -> Result<()> {
         Commands::Timeline { command } => handle_timeline_command(command),
         Commands::Info => handle_info(),
         Commands::Story { command } => handle_story_command(command),
-       // Commands::Episode { command } => handle_episode_command(command),
-       // Commands::Location { command } => handle_location_command(command),
+        Commands::Episode { command } => handle_episode_command(command),
+        Commands::Location { command } => handle_location_command(command),
+        Commands::Event { command } => handle_event_command(command),
+        Commands::Faction { command } => handle_faction_command(command),
        // Commands::System { command } => handle_system_command(command),
-       // Commands::Faction { command } => handle_faction_command(command),
-       // Commands::Event { command } => handle_event_command(command),
        // Commands::Race { command } => handle_race_command(command),
     }
 }

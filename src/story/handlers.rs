@@ -4,29 +4,22 @@ use anyhow::Result;
 
 pub fn handle_story_command(command: StoryCommands) -> Result<()> {
     match command {
-        StoryCommands::Create { name, title, story_type, set } => {
-            handle_create(name, title, story_type, set)
+        StoryCommands::Create { name, set } => {
+            handle_create(name, set)
         }
         StoryCommands::Types => handle_types(),
         StoryCommands::List => handle_list(),
         StoryCommands::Info { name } => handle_info(name),
         StoryCommands::Delete { name, force } => handle_delete(name, force),
-        StoryCommands::Update { name, title, story_type, set } => handle_update(name, title, story_type, set),
+        StoryCommands::Update { name, set } => handle_update(name, set),
     }
 }
 
-fn handle_update(name: String, title: Option<String>, story_type: Option<String>, mut set_args: Vec<(String, String)>) -> Result<()> {
+fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("🔄 Updating story '{name}'");
 
     let mut story = Story::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Story '{}' not found", name))?;
-
-    if let Some(title) = title {
-        set_args.push(("title".to_string(), title));
-    }
-    if let Some(story_type) = story_type {
-        set_args.push(("story_type".to_string(), story_type));
-    }
 
     story.update(set_args)?;
 
@@ -36,11 +29,27 @@ fn handle_update(name: String, title: Option<String>, story_type: Option<String>
     Ok(())
 }
 
-fn handle_create(name: String, title: String, story_type: String, mut set_args: Vec<(String, String)>) -> Result<()> {
-    println!("📖 Creating story '{name}' ({})", title);
+fn handle_create(name: String, mut set_args: Vec<(String, String)>) -> Result<()> {
+    // Validate required fields
+    if !set_args.iter().any(|(k, _)| k == "type" || k == "story_type") {
+        return Err(anyhow::anyhow!("Missing required field 'type'. Use --set type=<story_type>"));
+    }
     
-    set_args.push(("title".to_string(), title));
-    set_args.push(("story_type".to_string(), story_type));
+    let title = set_args.iter()
+        .find(|(k, _)| k == "title" || k == "display_name")
+        .map(|(_, v)| v.as_str())
+        .unwrap_or(&name);
+    
+    println!("📖 Creating story '{name}' ({})", title);
+
+    // Normalize field names: type -> story_type, title -> display_name
+    for (key, _) in &mut set_args {
+        if key == "type" {
+            *key = "story_type".to_string();
+        } else if key == "title" {
+            *key = "display_name".to_string();
+        }
+    }
 
     // Use Story factory method with built-in validation
     let mut story = Story::create_new(name.clone(), set_args)?;
@@ -119,7 +128,7 @@ fn handle_types() -> Result<()> {
     
     println!("\n📖 Example usage:");
     let first_type = config.world.global_config.story_types.keys().next().unwrap();
-    println!("   multiverse story create my_story --title \"My Story\" --type {} --set <field>=<value>", first_type);
+    println!("   multiverse story create my_story --set title=\"My Story\" --set type={} --set <field>=<value>", first_type);
 
     Ok(())
 }
@@ -130,7 +139,7 @@ fn handle_list() -> Result<()> {
     if stories.is_empty() {
         println!("📖 No stories found in this world");
         println!("   Use 'multiverse story types' to see available story types");
-        println!("   Use 'multiverse story create <name> --title <title> --type <type>' to create one");
+        println!("   Use 'multiverse story create <name> --set title=\"<title>\" --set type=<type>' to create one");
         return Ok(());
     }
     
@@ -175,6 +184,7 @@ fn handle_info(name: String) -> Result<()> {
     println!("📖 Story: {} - \"{}\"", story.name, story.display_name);
     println!("   Type: {}", story.story_type);
     println!("   Status: {:?}", story.status);
+    println!("   Word Count: {}", story.word_count);
     println!("   Created: {}", story.created_at.format("%Y-%m-%d %H:%M"));
     
     if let Some(desc) = story.metadata.get("description") {

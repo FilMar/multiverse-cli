@@ -276,7 +276,14 @@ macro_rules! define_entity_methods {
                 for (key, value) in set_args {
                     match key.as_str() {
                         $(stringify!($field) => {
-                            let json_value = serde_json::Value::String(value);
+                            // Try to parse as number first, then as string
+                            let json_value = if let Ok(num) = value.parse::<i32>() {
+                                serde_json::Value::Number(serde_json::Number::from(num))
+                            } else if let Ok(num) = value.parse::<f64>() {
+                                serde_json::Value::Number(serde_json::Number::from_f64(num).unwrap())
+                            } else {
+                                serde_json::Value::String(value)
+                            };
                             self.$field = serde_json::from_value(json_value)?;
                         })*
                         "status" => {

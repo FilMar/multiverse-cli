@@ -6,16 +6,7 @@ pub enum EventCommands {
     Create {
         /// Event name (unique identifier)
         name: String,
-        /// Event display name (human-readable name)
-        #[arg(long)]
-        display_name: String,
-        /// Event type (battle, political, natural, cultural, etc.)
-        #[arg(long, short = 't')]
-        event_type: String,
-        /// Event date (timeline format like "3A/2 Lum 124 DF" or "2024-03-15", defaults to "now")
-        #[arg(long, short = 'd')]
-        date: Option<String>,
-        /// Set metadata field (can be used multiple times: --set year=1453 --set importance=high)
+        /// Set metadata field (can be used multiple times: --set title="Event Name" --set date="3A/2 Lum 124 DF")
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },
@@ -45,16 +36,7 @@ pub enum EventCommands {
     Update {
         /// Event name
         name: String,
-        /// New event display name
-        #[arg(long)]
-        display_name: Option<String>,
-        /// New event type
-        #[arg(long, short = 't')]
-        event_type: Option<String>,
-        /// New event date
-        #[arg(long, short = 'd')]
-        date: Option<String>,
-        /// Set metadata field (can be used multiple times: --set importance=high)
+        /// Set metadata field (can be used multiple times: --set title="New Name" --set date="new date")
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },

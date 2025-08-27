@@ -1,5 +1,5 @@
 use super::cli::EpisodeCommands;
-use super::models::Episode;
+use super::models::{Episode, EpisodeStatus};
 use anyhow::Result;
 
 pub fn handle_episode_command(command: EpisodeCommands) -> Result<()> {
@@ -7,29 +7,26 @@ pub fn handle_episode_command(command: EpisodeCommands) -> Result<()> {
         EpisodeCommands::Create { story, set } => {
             handle_create(story, set)
         }
-        // EpisodeCommands::List { story } => handle_list(story),
-        // EpisodeCommands::Info { story, number } => handle_info(story, number),
-        // EpisodeCommands::Delete { story, number, force } => handle_delete(story, number, force),
-        // EpisodeCommands::Update { story, number, title, status, word_count } => handle_update(story, number, title, status, word_count),
-        _ => Ok(())
+        EpisodeCommands::List { story } => handle_list(story),
+        EpisodeCommands::Info { story, number } => handle_info(story, number),
+        EpisodeCommands::Delete { story, number, force } => handle_delete(story, number, force),
+        EpisodeCommands::Update { story, number, set } => handle_update(story, number, set),
     }
 }
 
-/*
-fn handle_update(story_name: String, episode_number: i32, title: Option<String>, status: Option<String>, word_count: Option<i32>) -> Result<()> {
+fn handle_update(story_name: String, episode_number: i32, set_args: Vec<(String, String)>) -> Result<()> {
     println!("🔄 Updating episode {} in story '{}'", episode_number, story_name);
 
-    let mut episode = Episode::get(&story_name, episode_number)?
+    let mut episode = Episode::get(&story_name, &episode_number)?
         .ok_or_else(|| anyhow::anyhow!("Episode {} not found in story '{}'", episode_number, story_name))?;
 
-    episode.update(title, status, word_count)?;
+    episode.update(set_args)?;
 
-    println!("✅ Episode {} updated!", episode.episode_number);
+    println!("✅ Episode {} updated!", episode.number);
     handle_info(story_name, episode_number)?;
 
     Ok(())
 }
-*/
 
 fn handle_create(story_name: String, set: Vec<(String, String)>) -> Result<()> {
     use crate::world::WorldConfig;
@@ -37,7 +34,13 @@ fn handle_create(story_name: String, set: Vec<(String, String)>) -> Result<()> {
     
     println!("📄 Creating episode in story '{}'...", story_name);
     
-    let episode = Episode::new_with_next_number(story_name.clone())?;
+    let mut episode = Episode::new_with_next_number(story_name.clone())?;
+    
+    // Apply set arguments to episode before creating
+    if !set.is_empty() {
+        episode.process_set_args(set.clone())?;
+    }
+    
     episode.create_with_file()?;
     
     let world_root = WorldConfig::get_world_root()
@@ -45,10 +48,10 @@ fn handle_create(story_name: String, set: Vec<(String, String)>) -> Result<()> {
     let story = crate::story::Story::get(&story_name.to_string())?
         .ok_or_else(|| anyhow::anyhow!("Story '{}' not found", story_name))?;
     let story_path = story.get_story_path(&world_root);
-    let episode_filename = format!("{:03}.md", episode.episode_number);
+    let episode_filename = format!("{:03}.md", episode.number);
     let episode_path = story_path.join(&episode_filename);
     
-    println!("✅ Episode {} created!", episode.episode_number);
+    println!("✅ Episode {} created!", episode.number);
     println!("   Story: {}", story_name);
     println!("   File: {}", episode_path.display());
     
@@ -60,13 +63,12 @@ fn handle_create(story_name: String, set: Vec<(String, String)>) -> Result<()> {
     Ok(())
 }
 
-/*
 fn handle_list(story_name: String) -> Result<()> {
-    let episodes = Episode::list(&story_name)?;
+    let episodes = Episode::list_for_story(&story_name)?;
     
     if episodes.is_empty() {
         println!("📄 No episodes found in story '{}'", story_name);
-        println!("   Use 'multiverse episode create --story {} --title <title>' to create one", story_name);
+        println!("   Use 'multiverse episode create --story {} --set title=<title>' to create one", story_name);
         return Ok(());
     }
     
@@ -80,17 +82,21 @@ fn handle_list(story_name: String) -> Result<()> {
             EpisodeStatus::Published => "✅",
         };
         
-        let title_str = episode.title
-            .as_deref()
-            .unwrap_or("(no title)");
+        let title_str = if !episode.title.is_empty() {
+            episode.title.as_str()
+        } else {
+            "(no title)"
+        };
         
-        let word_count_str = episode.word_count
-            .map(|wc| format!(" ({} words)", wc))
-            .unwrap_or_default();
+        let word_count_str = if episode.word_count > 0 {
+            format!(" ({} words)", episode.word_count)
+        } else {
+            String::new()
+        };
         
         println!("   {} {:03}. {}{}", 
             status_emoji, 
-            episode.episode_number, 
+            episode.number, 
             title_str,
             word_count_str
         );
@@ -100,28 +106,32 @@ fn handle_list(story_name: String) -> Result<()> {
 }
 
 fn handle_info(story_name: String, episode_number: i32) -> Result<()> {
-    let episode = Episode::get(&story_name, episode_number)?
+    let episode = Episode::get(&story_name, &episode_number)?
         .ok_or_else(|| anyhow::anyhow!("Episode {} not found in story '{}'", episode_number, story_name))?;
     
-    println!("📄 Episode {}: {}", episode.episode_number, story_name);
+    println!("📄 Episode {}: {}", episode.number, story_name);
     
-    if let Some(title) = &episode.title {
-        println!("   Title: {}", title);
+    if !episode.title.is_empty() {
+        println!("   Title: {}", episode.title);
     }
     
     println!("   Status: {:?}", episode.status);
+    println!("   Word Count: {}", episode.word_count);
     println!("   Created: {}", episode.created_at.format("%Y-%m-%d %H:%M"));
-    println!("   Updated: {}", episode.updated_at.format("%Y-%m-%d %H:%M"));
     
-    if let Some(word_count) = episode.word_count {
-        println!("   Word count: {}", word_count);
+    // Show metadata
+    if !episode.metadata.is_empty() {
+        println!("   Metadata:");
+        for (key, value) in &episode.metadata {
+            println!("     {}: {}", key, value);
+        }
     }
     
     Ok(())
 }
 
 fn handle_delete(story_name: String, episode_number: i32, force: bool) -> Result<()> {
-    let episode = Episode::get(&story_name, episode_number)?
+    let episode = Episode::get(&story_name, &episode_number)?
         .ok_or_else(|| anyhow::anyhow!("Episode {} not found in story '{}'", episode_number, story_name))?;
     
     if !force {
@@ -133,10 +143,9 @@ fn handle_delete(story_name: String, episode_number: i32, force: bool) -> Result
     
     println!("🗑️  Deleting episode {} from story '{}'...", episode_number, story_name);
     
-    episode.delete(force)?;
+    episode.delete_with_file(force)?;
     
     println!("✅ Episode {} deleted!", episode_number);
     
     Ok(())
 }
-*/
