@@ -4,23 +4,23 @@ use anyhow::Result;
 
 pub fn handle_location_command(command: LocationCommands) -> Result<()> {
     match command {
-        LocationCommands::Create { name, display_name, set } => {
-            handle_create(name, display_name, set)
+        LocationCommands::Create { name, set } => {
+            handle_create(name, set)
         }
         LocationCommands::List => handle_list(),
         LocationCommands::Info { name } => handle_info(name),
         LocationCommands::Delete { name, force } => handle_delete(name, force),
-        LocationCommands::Update { name, display_name, set } => handle_update(name, display_name, set),
+        LocationCommands::Update { name, set } => handle_update(name, set),
     }
 }
 
-fn handle_update(name: String, display_name: Option<String>, set_args: Vec<(String, String)>) -> Result<()> {
+fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("🔄 Updating location '{name}'");
 
     let mut location = Location::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Location '{}' not found", name))?;
 
-    location.update(display_name, set_args)?;
+    location.update(set_args)?;
 
     println!("✅ Location '{}' updated!", name);
     show_created_location(&location)?;
@@ -28,10 +28,10 @@ fn handle_update(name: String, display_name: Option<String>, set_args: Vec<(Stri
     Ok(())
 }
 
-fn handle_create(name: String, display_name: String, set_args: Vec<(String, String)>) -> Result<()> {
-    println!("🏛️  Creating location '{name}' ({display_name})");
+fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
+    println!("🏛️  Creating location '{name}'");
     
-    let location = Location::create_new(name.clone(), display_name, set_args)?;
+    let location = Location::create_new(name.clone(), set_args)?;
     location.create()?;
     
     show_created_location(&location)?;
@@ -68,7 +68,7 @@ fn handle_list() -> Result<()> {
     
     if locations.is_empty() {
         println!("🏛️  No locations found in this world");
-        println!("   Use 'multiverse location create <name> --display-name <name> --type <type>' to create one");
+        println!("   Use 'multiverse location create <name> --set display_name=\"<name>\" --set type=<type>' to create one");
         return Ok(());
     }
     

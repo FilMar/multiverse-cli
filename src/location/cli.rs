@@ -2,14 +2,11 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum LocationCommands {
-    /// Create a new location with flexible metadata
+    /// Create a new location with unified --set for all fields
     Create {
         /// Location name (unique identifier)
         name: String,
-        /// Location display name (human-readable name)
-        #[arg(long)]
-        display_name: String,
-        /// Set metadata field (can be used multiple times: --set type=city --set population=1000 --set description="...")
+        /// Set any field (--set display_name="Name" --set status="Active" --set type=city --set description="...")
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },
@@ -36,10 +33,7 @@ pub enum LocationCommands {
     Update {
         /// Location name
         name: String,
-        /// New location display name
-        #[arg(long)]
-        display_name: Option<String>,
-        /// Set metadata field (can be used multiple times: --set type=city --set population=1000 --set description="...")
+        /// Set any field (--set display_name="Name" --set status="Active" --set type=city --set description="...")
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },

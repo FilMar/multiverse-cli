@@ -4,8 +4,10 @@ use anyhow::Result;
 
 pub fn handle_faction_command(command: FactionCommands) -> Result<()> {
     match command {
-        FactionCommands::Create { name, display_name, faction_type, set } => {
-            handle_create(name, display_name, faction_type, set)
+        FactionCommands::Create { name, display_name, faction_type, mut set } => {
+            set.push(("display_name".to_string(), display_name));
+            set.push(("faction_type".to_string(), faction_type));
+            handle_create(name, set)
         }
         FactionCommands::List => handle_list(),
         FactionCommands::Info { name } => handle_info(name),
@@ -15,12 +17,19 @@ pub fn handle_faction_command(command: FactionCommands) -> Result<()> {
 }
 
 fn handle_update(name: String, display_name: Option<String>, faction_type: Option<String>, set_args: Vec<(String, String)>) -> Result<()> {
-    println!("🔄 Updating faction '{name}'");
+    println!("🔄 Updating faction '{}'", name);
 
     let mut faction = Faction::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Faction '{}' not found", name))?;
 
-    faction.update(display_name, faction_type, set_args)?;
+    if let Some(display_name) = display_name {
+        faction.display_name = display_name;
+    }
+    if let Some(faction_type) = faction_type {
+        faction.faction_type = faction_type;
+    }
+
+    faction.update(set_args)?;
 
     println!("✅ Faction '{}' updated!", name);
     show_created_faction(&faction)?;
@@ -28,10 +37,10 @@ fn handle_update(name: String, display_name: Option<String>, faction_type: Optio
     Ok(())
 }
 
-fn handle_create(name: String, display_name: String, faction_type: String, set_args: Vec<(String, String)>) -> Result<()> {
-    println!("⚔️  Creating faction '{name}' ({display_name})");
+fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
+    println!("⚔️  Creating faction '{}'", name);
     
-    let faction = Faction::create_new(name.clone(), display_name, faction_type, set_args)?;
+    let mut faction = Faction::create_new(name.clone(), set_args)?;
     faction.create()?;
     
     show_created_faction(&faction)?;
@@ -66,7 +75,7 @@ fn handle_list() -> Result<()> {
     if factions.is_empty() {
         println!("⚔️  No factions found in this world");
         println!("   Use 'multiverse faction create <name> --display-name <name> --type <type>' to create one");
-        return Ok(());
+        return Ok(())
     }
     
     println!("⚔️  Factions in current world:");
@@ -81,7 +90,7 @@ fn handle_list() -> Result<()> {
         
         println!("   {} {} - \"{}\" ({})", 
             status_emoji, 
-            faction.name, 
+            faction.name,
             faction.display_name,
             faction.faction_type
         );
@@ -134,17 +143,17 @@ fn handle_delete(name: String, force: bool) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Faction '{}' not found", name))?;
     
     if !force {
-        println!("⚠️  Are you sure you want to delete faction '{name}'?");
+        println!("⚠️  Are you sure you want to delete faction '{}'?", name);
         println!("   This will permanently delete the faction and remove it from all references");
         println!("   Use --force to skip this confirmation");
-        return Ok(());
+        return Ok(())
     }
     
-    println!("🗑️  Deleting faction '{name}'...");
+    println!("🗑️  Deleting faction '{}'...", name);
     
-    Faction::delete(&name)?;
+    faction.delete(force)?;
     
-    println!("✅ Faction '{name}' deleted!");
+    println!("✅ Faction '{}' deleted!", name);
     
     Ok(())
 }

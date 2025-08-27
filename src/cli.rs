@@ -1,5 +1,17 @@
 use clap::{Parser, Subcommand};
-use crate::{story::{StoryCommands, EpisodeCommands}, character::CharacterCommands, location::LocationCommands, system::SystemCommands, faction::FactionCommands, event::EventCommands, world::WorldCommands, race::RaceCommands, timeline::TimelineCommands, relations::RelationCommands};
+use crate::{
+    character::CharacterCommands,
+    world::WorldCommands, 
+    timeline::TimelineCommands,
+    story::StoryCommands
+    // TODO: Re-enable as we implement them:
+    // episode::EpisodeCommands, 
+    // location::LocationCommands, 
+    // system::SystemCommands, 
+    // faction::FactionCommands, 
+    // event::EventCommands, 
+    // race::RaceCommands
+};
 
 #[derive(Parser)]
 #[command(name = "multiverse")]
@@ -17,54 +29,55 @@ pub enum Commands {
         #[command(subcommand)]
         command: WorldCommands,
     },
-    
-    /// Manage stories (requires being in a multiverse project)
-    Story {
-        #[command(subcommand)]
-        command: StoryCommands,
-    },
-    
-    /// Manage episodes (requires being in a multiverse project)
-    Episode {
-        #[command(subcommand)]
-        command: EpisodeCommands,
-    },
-    
     /// Manage characters (requires being in a multiverse project)
     Character {
         #[command(subcommand)]
         command: CharacterCommands,
     },
     
-    /// Manage locations (requires being in a multiverse project)
-    Location {
+    // TODO: Re-enable when entities are re-implemented:
+   // /// Manage stories (requires being in a multiverse project)
+   Story {
         #[command(subcommand)]
-        command: LocationCommands,
+        command: StoryCommands,
     },
-    
-    /// Manage systems (requires being in a multiverse project)
-    System {
-        #[command(subcommand)]
-        command: SystemCommands,
-    },
-    
-    /// Manage factions (requires being in a multiverse project)
-    Faction {
-        #[command(subcommand)]
-        command: FactionCommands,
-    },
-    
-    /// Manage events (requires being in a multiverse project)
-    Event {
-        #[command(subcommand)]
-        command: EventCommands,
-    },
+   // 
+   // /// Manage episodes (requires being in a multiverse project)
+   // Episode {
+   //     #[command(subcommand)]
+   //     command: EpisodeCommands,
+   // },
+   // 
+   // 
+   // /// Manage locations (requires being in a multiverse project)
+   // Location {
+   //     #[command(subcommand)]
+   //     command: LocationCommands,
+   // },
+   // 
+   // /// Manage systems (requires being in a multiverse project)
+   // System {
+   //     #[command(subcommand)]
+   //     command: SystemCommands,
+   // },
+   // 
+   // /// Manage factions (requires being in a multiverse project)
+   // Faction {
+   //     #[command(subcommand)]
+   //     command: FactionCommands,
+   // },
+   // 
+   // /// Manage events (requires being in a multiverse project)
+   // Event {
+   //     #[command(subcommand)]
+   //     command: EventCommands,
+   // },
 
-    /// Manage races (requires being in a multiverse project)
-    Race {
-        #[command(subcommand)]
-        command: RaceCommands,
-    },
+   // /// Manage races (requires being in a multiverse project)
+   // Race {
+   //     #[command(subcommand)]
+   //     command: RaceCommands,
+   // },
 
     /// Manage timeline configuration and dates (requires being in a multiverse project)
     Timeline {
@@ -72,11 +85,6 @@ pub enum Commands {
         command: TimelineCommands,
     },
 
-    /// Manage relations between entities (requires being in a multiverse project)
-    Relation {
-        #[command(subcommand)]
-        command: RelationCommands,
-    },
     
     /// Show project information
     Info,

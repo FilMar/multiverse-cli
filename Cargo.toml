@@ -50,3 +50,7 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.18", features = ["v4", "serde"] }
 shellexpand = "3.1"
 dirs = "6.0"
+paste = "1.0.15"
+
+[dev-dependencies]
+tempfile = "3.8"

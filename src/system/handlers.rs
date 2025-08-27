@@ -4,26 +4,23 @@ use anyhow::Result;
 
 pub fn handle_system_command(command: SystemCommands) -> Result<()> {
     match command {
-        SystemCommands::Create {
-            name,
-            display_name,
-            system_type,
-            set,
-        } => handle_create(name, display_name, system_type, set),
+        SystemCommands::Create { name, set } => {
+            handle_create(name, set)
+        }
         SystemCommands::List => handle_list(),
         SystemCommands::Info { name } => handle_info(name),
         SystemCommands::Delete { name, force } => handle_delete(name, force),
-        SystemCommands::Update { name, display_name, system_type, set } => handle_update(name, display_name, system_type, set),
+        SystemCommands::Update { name, set } => handle_update(name, set),
     }
 }
 
-fn handle_update(name: String, display_name: Option<String>, system_type: Option<String>, set_args: Vec<(String, String)>) -> Result<()> {
+fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("🔄 Updating system '{name}'");
 
     let mut system = System::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("System '{}' not found", name))?;
 
-    system.update(display_name, system_type, set_args)?;
+    system.update(set_args)?;
 
     println!("✅ System '{}' updated!", name);
     show_created_system(&system)?;
@@ -31,14 +28,9 @@ fn handle_update(name: String, display_name: Option<String>, system_type: Option
     Ok(())
 }
 
-fn handle_create(
-    name: String,
-    display_name: String,
-    system_type: String,
-    set_args: Vec<(String, String)>,
-) -> Result<()> {
-    println!("⚙️  Creating system '{name}' ({display_name})");
-    let system = System::create_new(name.clone(), display_name, system_type, set_args)?;
+fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
+    println!("⚙️  Creating system '{name}'");
+    let system = System::create_new(name.clone(), set_args)?;
     system.create()?;
     show_created_system(&system)?;
     Ok(())
@@ -50,8 +42,8 @@ fn show_created_system(system: &System) -> Result<()> {
     println!("   Type: {}", system.system_type);
     println!("   Status: {:?}", system.status);
 
-    if let Some(desc) = &system.description {
-        println!("   Description: {desc}");
+    if let Some(desc) = system.metadata.get("description") {
+        println!("   Description: {}", desc.as_str().unwrap_or(""));
     }
 
     // Show metadata
@@ -70,7 +62,7 @@ fn handle_list() -> Result<()> {
 
     if systems.is_empty() {
         println!("⚙️  No systems found in this world");
-        println!("   Use 'multiverse system create <name> --display-name <name> --type <type>' to create one");
+        println!("   Use 'multiverse system create <name> --set display_name=\\\"<name>\\\" --set system_type=<type>' to create one");
         return Ok(());
     }
 
@@ -100,8 +92,8 @@ fn handle_list() -> Result<()> {
             println!("      Origin: {}", origin.as_str().unwrap_or("Unknown"));
         }
 
-        if let Some(desc) = &system.description {
-            println!("      {desc}");
+        if let Some(desc) = system.metadata.get("description") {
+            println!("      {}", desc.as_str().unwrap_or(""));
         }
     }
 
@@ -117,8 +109,8 @@ fn handle_info(name: String) -> Result<()> {
     println!("   Status: {:?}", system.status);
     println!("   Created: {}", system.created_at.format("%Y-%m-%d %H:%M"));
 
-    if let Some(desc) = &system.description {
-        println!("   Description: {desc}");
+    if let Some(desc) = system.metadata.get("description") {
+        println!("   Description: {}", desc.as_str().unwrap_or(""));
     }
 
     // Show metadata
@@ -150,7 +142,9 @@ fn handle_delete(name: String, force: bool) -> Result<()> {
 
     println!("🗑️  Deleting system '{name}'...");
 
-    System::delete(&name)?;
+    let system = System::get(&name)?
+        .ok_or_else(|| anyhow::anyhow!("System '{}' not found", name))?;
+    system.delete(force)?;
 
     println!("✅ System '{name}' deleted!");
 

@@ -5,24 +5,22 @@ use anyhow::Result;
 use cli::{Cli, Commands};
 use multiverse::*;
 use multiverse::timeline::handle_timeline_command;
-use multiverse::relations::handle_relation_command;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     
     match cli.command {
         Commands::World { command } => handle_world_command(command),
-        Commands::Story { command } => handle_story_command(command),
-        Commands::Episode { command } => handle_episode_command(command),
         Commands::Character { command } => handle_character_command(command),
-        Commands::Location { command } => handle_location_command(command),
-        Commands::System { command } => handle_system_command(command),
-        Commands::Faction { command } => handle_faction_command(command),
-        Commands::Event { command } => handle_event_command(command),
-        Commands::Race { command } => handle_race_command(command),
         Commands::Timeline { command } => handle_timeline_command(command),
-        Commands::Relation { command } => handle_relation_command(command),
         Commands::Info => handle_info(),
+        Commands::Story { command } => handle_story_command(command),
+       // Commands::Episode { command } => handle_episode_command(command),
+       // Commands::Location { command } => handle_location_command(command),
+       // Commands::System { command } => handle_system_command(command),
+       // Commands::Faction { command } => handle_faction_command(command),
+       // Commands::Event { command } => handle_event_command(command),
+       // Commands::Race { command } => handle_race_command(command),
     }
 }
 

@@ -1,5 +1,5 @@
-use super::story_cli::StoryCommands;
-use super::story_models::Story;
+use super::cli::StoryCommands;
+use super::models::Story;
 use anyhow::Result;
 
 pub fn handle_story_command(command: StoryCommands) -> Result<()> {
@@ -15,13 +15,20 @@ pub fn handle_story_command(command: StoryCommands) -> Result<()> {
     }
 }
 
-fn handle_update(name: String, title: Option<String>, story_type: Option<String>, set_args: Vec<(String, String)>) -> Result<()> {
+fn handle_update(name: String, title: Option<String>, story_type: Option<String>, mut set_args: Vec<(String, String)>) -> Result<()> {
     println!("🔄 Updating story '{name}'");
 
     let mut story = Story::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Story '{}' not found", name))?;
 
-    story.update(title, story_type, set_args)?;
+    if let Some(title) = title {
+        set_args.push(("title".to_string(), title));
+    }
+    if let Some(story_type) = story_type {
+        set_args.push(("story_type".to_string(), story_type));
+    }
+
+    story.update(set_args)?;
 
     println!("✅ Story '{}' updated!", name);
     show_created_story(&story)?;
@@ -29,12 +36,15 @@ fn handle_update(name: String, title: Option<String>, story_type: Option<String>
     Ok(())
 }
 
-fn handle_create(name: String, title: String, story_type: String, set_args: Vec<(String, String)>) -> Result<()> {
+fn handle_create(name: String, title: String, story_type: String, mut set_args: Vec<(String, String)>) -> Result<()> {
     println!("📖 Creating story '{name}' ({})", title);
     
+    set_args.push(("title".to_string(), title));
+    set_args.push(("story_type".to_string(), story_type));
+
     // Use Story factory method with built-in validation
-    let story = Story::create_new(name.clone(), title, story_type, set_args)?;
-    story.create()?;
+    let mut story = Story::create_new(name.clone(), set_args)?;
+    story.create_with_directory()?;
     
     // Display success information
     show_created_story(&story)?;
@@ -56,7 +66,7 @@ fn show_created_story(story: &Story) -> Result<()> {
     
     println!("✅ Story '{}' created!", story.name);
     println!("   Location: {}", story_path.display());
-    println!("   Title: {}", story.title);
+    println!("   Title: {}", story.display_name);
     println!("   Type: {} ({})", story.story_type, type_config.display_name);
     
     // Show metadata
@@ -128,16 +138,17 @@ fn handle_list() -> Result<()> {
     
     for story in stories {
         let status_emoji = match story.status {
-            crate::story::story_models::StoryStatus::Active => "🟢",
-            crate::story::story_models::StoryStatus::Paused => "🟡", 
-            crate::story::story_models::StoryStatus::Completed => "✅",
-            crate::story::story_models::StoryStatus::Archived => "📦",
+            crate::story::models::StoryStatus::Draft => "📝",
+            crate::story::models::StoryStatus::InProgress => "🟢",
+            crate::story::models::StoryStatus::Review => "🟡", 
+            crate::story::models::StoryStatus::Published => "✅",
+            crate::story::models::StoryStatus::Archived => "📦",
         };
         
         println!("   {} {} - \"{}\" ({})", 
             status_emoji, 
             story.name, 
-            story.title,
+            story.display_name,
             story.story_type
         );
         
@@ -161,7 +172,7 @@ fn handle_info(name: String) -> Result<()> {
     let story = Story::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Story '{}' not found", name))?;
     
-    println!("📖 Story: {} - \"{}\"", story.name, story.title);
+    println!("📖 Story: {} - \"{}\"", story.name, story.display_name);
     println!("   Type: {}", story.story_type);
     println!("   Status: {:?}", story.status);
     println!("   Created: {}", story.created_at.format("%Y-%m-%d %H:%M"));
@@ -197,7 +208,7 @@ fn handle_delete(name: String, force: bool) -> Result<()> {
     
     println!("🗑️  Deleting story '{name}'...");
     
-    story.delete(force)?;
+    story.delete_with_directory(force)?;
     
     println!("✅ Story '{name}' deleted!");
     

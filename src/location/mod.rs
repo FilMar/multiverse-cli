@@ -1,5 +1,4 @@
 pub mod models;
-pub mod database;
 pub mod cli;
 pub mod handlers;
 

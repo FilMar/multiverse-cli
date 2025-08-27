@@ -1,19 +1,21 @@
-use super::episode_cli::EpisodeCommands;
-use super::episode_models::{Episode, EpisodeStatus};
+use super::cli::EpisodeCommands;
+use super::models::Episode;
 use anyhow::Result;
 
 pub fn handle_episode_command(command: EpisodeCommands) -> Result<()> {
     match command {
-        EpisodeCommands::Create { story, title } => {
-            handle_create(story, title)
+        EpisodeCommands::Create { story, set } => {
+            handle_create(story, set)
         }
-        EpisodeCommands::List { story } => handle_list(story),
-        EpisodeCommands::Info { story, number } => handle_info(story, number),
-        EpisodeCommands::Delete { story, number, force } => handle_delete(story, number, force),
-        EpisodeCommands::Update { story, number, title, status, word_count } => handle_update(story, number, title, status, word_count),
+        // EpisodeCommands::List { story } => handle_list(story),
+        // EpisodeCommands::Info { story, number } => handle_info(story, number),
+        // EpisodeCommands::Delete { story, number, force } => handle_delete(story, number, force),
+        // EpisodeCommands::Update { story, number, title, status, word_count } => handle_update(story, number, title, status, word_count),
+        _ => Ok(())
     }
 }
 
+/*
 fn handle_update(story_name: String, episode_number: i32, title: Option<String>, status: Option<String>, word_count: Option<i32>) -> Result<()> {
     println!("🔄 Updating episode {} in story '{}'", episode_number, story_name);
 
@@ -27,19 +29,20 @@ fn handle_update(story_name: String, episode_number: i32, title: Option<String>,
 
     Ok(())
 }
+*/
 
-fn handle_create(story_name: String, title: Option<String>) -> Result<()> {
+fn handle_create(story_name: String, set: Vec<(String, String)>) -> Result<()> {
     use crate::world::WorldConfig;
     use anyhow::Context;
     
     println!("📄 Creating episode in story '{}'...", story_name);
     
-    let episode = Episode::new(story_name.clone(), title.clone())?;
-    episode.create()?;
+    let episode = Episode::new_with_next_number(story_name.clone())?;
+    episode.create_with_file()?;
     
     let world_root = WorldConfig::get_world_root()
         .context("Not in a multiverse project directory")?;
-    let story = super::story_models::Story::get(&story_name)?
+    let story = crate::story::Story::get(&story_name.to_string())?
         .ok_or_else(|| anyhow::anyhow!("Story '{}' not found", story_name))?;
     let story_path = story.get_story_path(&world_root);
     let episode_filename = format!("{:03}.md", episode.episode_number);
@@ -49,13 +52,15 @@ fn handle_create(story_name: String, title: Option<String>) -> Result<()> {
     println!("   Story: {}", story_name);
     println!("   File: {}", episode_path.display());
     
-    if let Some(title) = &title {
+    // Extract title from set args if provided
+    if let Some((_, title)) = set.iter().find(|(key, _)| key == "title") {
         println!("   Title: {}", title);
     }
     
     Ok(())
 }
 
+/*
 fn handle_list(story_name: String) -> Result<()> {
     let episodes = Episode::list(&story_name)?;
     
@@ -134,3 +139,4 @@ fn handle_delete(story_name: String, episode_number: i32, force: bool) -> Result
     
     Ok(())
 }
+*/

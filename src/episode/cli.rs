@@ -7,9 +7,9 @@ pub enum EpisodeCommands {
         /// Story name
         #[arg(short, long)]
         story: String,
-        /// Episode title (optional)
-        #[arg(short, long)]
-        title: Option<String>,
+        /// Set any field (--set display_name="Name" --set status="Active" --set age=25 --set faction=rebels)
+        #[arg(long, value_parser = parse_key_val)]
+        set: Vec<(String, String)>,
     },
     
     /// List episodes in a story
@@ -50,14 +50,16 @@ pub enum EpisodeCommands {
         /// Episode number
         #[arg(short, long)]
         number: i32,
-        /// New episode title
-        #[arg(short, long)]
-        title: Option<String>,
-        /// New episode status
-        #[arg(long)]
-        status: Option<String>,
-        /// New word count
-        #[arg(long)]
-        word_count: Option<i32>,
+        /// Set any field (--set display_name="Name" --set status="Active" --set age=25 --set faction=rebels)
+        #[arg(long, value_parser = parse_key_val)]
+        set: Vec<(String, String)>,
     },
+}
+
+/// Parse a single key-value pair for --set flag
+fn parse_key_val(s: &str) -> Result<(String, String), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    let pos = s
+        .find('=')
+        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
+    Ok((s[..pos].to_string(), s[pos + 1..].to_string()))
 }

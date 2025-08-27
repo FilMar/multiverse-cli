@@ -4,23 +4,23 @@ use anyhow::Result;
 
 pub fn handle_character_command(command: CharacterCommands) -> Result<()> {
     match command {
-        CharacterCommands::Create { name, display_name, set } => {
-            handle_create(name, display_name, set)
+        CharacterCommands::Create { name, set } => {
+            handle_create(name, set)
         }
         CharacterCommands::List => handle_list(),
         CharacterCommands::Info { name } => handle_info(name),
         CharacterCommands::Delete { name, force } => handle_delete(name, force),
-        CharacterCommands::Update { name, display_name, status, set } => handle_update(name, display_name, status, set),
+        CharacterCommands::Update { name, set } => handle_update(name, set),
     }
 }
 
-fn handle_update(name: String, display_name: Option<String>, status: Option<String>, set_args: Vec<(String, String)>) -> Result<()> {
+fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("🔄 Updating character '{name}'");
 
     let mut character = Character::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Character '{}' not found", name))?;
 
-    character.update(display_name, status, set_args)?;
+    character.update(set_args)?;
 
     println!("✅ Character '{}' updated!", name);
     show_created_character(&character)?;
@@ -28,10 +28,10 @@ fn handle_update(name: String, display_name: Option<String>, status: Option<Stri
     Ok(())
 }
 
-fn handle_create(name: String, display_name: String, set_args: Vec<(String, String)>) -> Result<()> {
-    println!("👤 Creating character '{name}' ({display_name})");
+fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
+    println!("👤 Creating character '{name}'");
     
-    let character = Character::create_new(name.clone(), display_name, set_args)?;
+    let mut character = Character::create_new(name.clone(), set_args)?;
     character.create()?;
     
     show_created_character(&character)?;
@@ -59,7 +59,7 @@ fn handle_list() -> Result<()> {
     
     if characters.is_empty() {
         println!("👤 No characters found in this world");
-        println!("   Use 'multiverse character create <name> --display-name <name>' to create one");
+        println!("   Use 'multiverse character create <name> --set display_name=\"<name>\"' to create one");
         return Ok(());
     }
     

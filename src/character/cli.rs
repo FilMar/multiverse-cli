@@ -2,14 +2,11 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum CharacterCommands {
-    /// Create a new character with flexible metadata
+    /// Create a new character with unified --set for all fields
     Create {
         /// Character name (unique identifier)
         name: String,
-        /// Character display name (human-readable name)
-        #[arg(long)]
-        display_name: String,
-        /// Set metadata field (can be used multiple times: --set age=25 --set faction=rebels)
+        /// Set any field (--set display_name="Name" --set status="Active" --set age=25 --set faction=rebels)
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },
@@ -36,13 +33,7 @@ pub enum CharacterCommands {
     Update {
         /// Character name
         name: String,
-        /// New character display name
-        #[arg(long)]
-        display_name: Option<String>,
-        /// New character status
-        #[arg(long)]
-        status: Option<String>,
-        /// Set metadata field (can be used multiple times: --set age=25 --set description="..." --set faction=rebels)
+        /// Set any field (--set display_name="Name" --set status="Active" --set age=25 --set description="...")
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },
