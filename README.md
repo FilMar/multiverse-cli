@@ -14,8 +14,9 @@ Una CLI per gestire progetti narrativi complessi con focus su worldbuilding e st
 
 - 🗄️ **Database SQLite** completo per tutti i metadati
 - 📚 **Story & Episode Management** con tipi configurabili e stati
-- 👥 **Character & Location Management** con metadati JSON completamente flessibili
+- 👥 **Character & Location Management** con metadati JSON completamente flessibili  
 - 🔮 **System & Faction Management** per elementi di worldbuilding
+- 🧙 **Race Management** per gestione razze e specie del mondo
 - 📅 **Event Management** con supporto per timeline cronologica
 - ✏️ **Full CRUD** per tutte le entità (Create, Read, Update, Delete)
 - 🔗 **Git integration** per sincronizzazione repository
@@ -44,13 +45,14 @@ cargo install --path .
 # Inizializza nuovo mondo narrativo
 multiverse world init wandering-sun
 
-# Crea una storia, un personaggio, un luogo, un sistema, una fazione e un evento
+# Crea una storia, un personaggio, un luogo, un sistema, una fazione, una razza e un evento
 multiverse story create "fenrik_mealor" --type diary
-multiverse character create "fenrik" --display-name "Fenrik Mealor" --set profession=explorer --set description="Esploratore del regno"
-multiverse location create "glass_gardens" --display-name "Glass Gardens" --set type=region --set description="Giardini cristallini"
-multiverse system create "aetherial_magic" --display-name "Aetherial Magic" --set type=magic --set description="Sistema magico etereo"
-multiverse faction create "sylvan_guardians" --display-name "Sylvan Guardians" --set type=guild --set description="Guardiani della foresta"
-multiverse event create "first_contact" --display-name "First Contact" --set type=discovery --set description="Primo contatto" --date "1A/1/1"
+multiverse character create "fenrik" --set display_name="Fenrik Mealor" --set profession=explorer --set description="Esploratore del regno"
+multiverse location create "glass_gardens" --set display_name="Glass Gardens" --set type=region --set description="Giardini cristallini"
+multiverse system create "aetherial_magic" --set display_name="Aetherial Magic" --set system_type=magic --set description="Sistema magico etereo"
+multiverse faction create "sylvan_guardians" --set display_name="Sylvan Guardians" --set type=guild --set description="Guardiani della foresta"
+multiverse race create "high_elves" --set display_name="High Elves" --set lifespan=1000 --set description="Nobili elfi dalle lunghe vite"
+multiverse event create "first_contact" --set display_name="First Contact" --set type=discovery --set description="Primo contatto" --date "1A/1/1"
 
 # Crea un episodio e associalo a un personaggio
 multiverse episode create --story fenrik_mealor --title "Il Giardino di Vetro"
@@ -90,6 +92,10 @@ Il progetto utilizza **SQLite** per gestire metadati:
 - **`episodes`** - Episodi individuali con stati e metadati
 - **`characters`** - Personaggi con metadata flessibili e stati
 - **`locations`** - Luoghi con tipologie e metadata configurabili
+- **`systems`** - Sistemi del mondo (magia, tecnologia, etc.) con metadata
+- **`factions`** - Fazioni e organizzazioni con stati e metadata
+- **`races`** - Razze e specie con stati specializzati e metadata
+- **`events`** - Eventi storici con date e timeline cronologica
 - **`episode_characters`** - Relazioni tra episodi e personaggi
 
 ## 🎮 Comandi CLI
@@ -109,24 +115,28 @@ multiverse episode update <...>  # Aggiorna un episodio
 
 ```bash
 # Gestione Personaggi (tutto tramite metadata --set)
-multiverse character create <nome> --display-name <...> --set description="..." --set profession="..."
-multiverse character update <nome> --display-name <...> --set age=25 --set status=active
+multiverse character create <nome> --set display_name="..." --set description="..." --set profession="..."
+multiverse character update <nome> --set age=25 --set status=active
 
 # Gestione Luoghi (tipo e descrizione in metadata)
-multiverse location create <nome> --display-name <...> --set type=city --set description="..."
-multiverse location update <nome> --display-name <...> --set population=10000
+multiverse location create <nome> --set display_name="..." --set type=city --set description="..."
+multiverse location update <nome> --set population=10000
 
 # Gestione Sistemi (es. magia, tecnologia)
-multiverse system create <nome> --display-name <...> --set type=magic --set description="..."
-multiverse system update <nome> --display-name <...> --set complexity=high
+multiverse system create <nome> --set display_name="..." --set system_type=magic --set description="..."
+multiverse system update <nome> --set complexity=high
 
 # Gestione Fazioni
-multiverse faction create <nome> --display-name <...> --set type=guild --set description="..."
-multiverse faction update <nome> --display-name <...> --set alignment=neutral
+multiverse faction create <nome> --set display_name="..." --set type=guild --set description="..."
+multiverse faction update <nome> --set alignment=neutral
+
+# Gestione Razze
+multiverse race create <nome> --set display_name="..." --set lifespan=1000 --set description="..."
+multiverse race update <nome> --set status=Legendary --set population=few
 
 # Gestione Eventi Storici
-multiverse event create <nome> --display-name <...> --set type=battle --set description="..." --date <data>
-multiverse event update <nome> --display-name <...> --date <data>
+multiverse event create <nome> --set display_name="..." --set type=battle --set description="..." --date <data>
+multiverse event update <nome> --set date=<data>
 multiverse event timeline          # Mostra gli eventi in ordine cronologico
 ```
 
@@ -183,9 +193,10 @@ cargo build --release
 
 ### Fase 2: Worldbuilding (Completata) ✅
 - [x] Characters database + CLI commands
-- [x] Locations database + CLI commands
+- [x] Locations database + CLI commands  
 - [x] Systems database + CLI commands
 - [x] Factions database + CLI commands
+- [x] Races database + CLI commands
 - [x] Events database + CLI commands
 - [x] Relazioni episodi-personaggi
 

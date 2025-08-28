@@ -18,13 +18,13 @@ Stato attuale delle features implementate nel progetto Multiverse CLI.
 - **Comandi**: `character create/list/info/delete/update`, `location create/list/info/delete/update`
 - **Funzionalità**: Gestione completa con **metadati JSON completamente flessibili**. Tutti i campi descrittivi e tipi ora gestiti via `--set key=value` per massima personalizzazione.
 
-#### 🔮 Systems Management
-- **Comandi**: `system create/list/info/delete/update`
-- **Funzionalità**: Gestione dei sistemi del mondo (magia, tecnologia, cosmologia) con **architettura metadata-first** - tipi e descrizioni definibili liberamente per ogni mondo.
+#### 🔮 Systems & Factions Management
+- **Comandi**: `system create/list/info/delete/update`, `faction create/list/info/delete/update`
+- **Funzionalità**: Gestione dei sistemi del mondo (magia, tecnologia, cosmologia) e delle fazioni/organizzazioni con **architettura metadata-first** - tipi e descrizioni definibili liberamente per ogni mondo.
 
-#### ⚔️ Factions Management
-- **Comandi**: `faction create/list/info/delete/update`
-- **Funzionalità**: Gestione di fazioni e organizzazioni con **schema completamente configurabile** - nessun vincolo su tipi o campi predefiniti.
+#### 🧙 Race Management
+- **Comandi**: `race create/list/info/delete/update`
+- **Funzionalità**: Gestione delle razze e specie del mondo con **schema completamente configurabile** e stati specializzati (Active, Inactive, Extinct, Legendary, Mythical). Pattern `--set` unificato per massima flessibilità.
 
 #### 📅 Events Management
 - **Comandi**: `event create/list/info/update/delete/timeline`
@@ -84,7 +84,7 @@ Stato attuale delle features implementate nel progetto Multiverse CLI.
 - **Mancante**: 10% (Solo funzionalità avanzate di analisi, export e integrazione AI)
 
 Il progetto ha una **base solida e completa** per la gestione narrativa e di worldbuilding, con:
-- ✅ **Sistema completo** per la gestione di mondi, storie, episodi, personaggi, luoghi, sistemi, fazioni ed eventi.
+- ✅ **Sistema completo** per la gestione di mondi, storie, episodi, personaggi, luoghi, sistemi, fazioni, razze ed eventi.
 - ✅ **Onboarding automatico** di progetti esistenti tramite guide per LLM.
 - ✅ **Configurazione flessibile** tramite TOML.
 - ✅ **Schema completamente configurabile** con metadati JSON per ogni entità - **zero vincoli predefiniti**.
@@ -94,7 +94,7 @@ Il progetto ha una **base solida e completa** per la gestione narrativa e di wor
 
 ### 🎯 Vantaggi del Refactoring Metadata-First
 
-- **Flessibilità totale**: Ogni mondo può avere i propri tipi di personaggi, luoghi, sistemi, fazioni ed eventi
+- **Flessibilità totale**: Ogni mondo può avere i propri tipi di personaggi, luoghi, sistemi, fazioni, razze ed eventi
 - **Zero migration**: Nuove proprietà aggiunte senza modifiche al database
 - **Personalizzazione completa**: `--set key=value` per qualsiasi campo immaginabile
 - **Schema futuro-proof**: Supporto per qualsiasi esigenza narrativa senza modifiche al codice

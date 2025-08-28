@@ -30,14 +30,13 @@ fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
 
 fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("⚙️  Creating system '{name}'");
-    let system = System::create_new(name.clone(), set_args)?;
+    let mut system = System::create_new(name.clone(), set_args)?;
     system.create()?;
     show_created_system(&system)?;
     Ok(())
 }
 
 fn show_created_system(system: &System) -> Result<()> {
-    println!("✅ System '{}' created!", system.name);
     println!("   Display name: {}", system.display_name);
     println!("   Type: {}", system.system_type);
     println!("   Status: {:?}", system.status);
@@ -50,7 +49,9 @@ fn show_created_system(system: &System) -> Result<()> {
     if !system.metadata.is_empty() {
         println!("   Metadata:");
         for (key, value) in &system.metadata {
-            println!("     {}: {}", key, value);
+            if key != "description" {
+                println!("     {}: {}", key, value);
+            }
         }
     }
 
@@ -128,7 +129,7 @@ fn handle_info(name: String) -> Result<()> {
 }
 
 fn handle_delete(name: String, force: bool) -> Result<()> {
-    let system =
+    let _system =
         System::get(&name)?.ok_or_else(|| anyhow::anyhow!("System '{}' not found", name))?;
 
     if !force {

@@ -7,11 +7,10 @@ use crate::{
     episode::EpisodeCommands,
     location::LocationCommands,
     event::EventCommands,
-    faction::FactionCommands
-    // TODO: Re-enable as we implement them: 
-    // system::SystemCommands, 
- 
-    // race::RaceCommands
+    faction::FactionCommands,
+    system::SystemCommands,
+    race::RaceCommands
+    // TODO: Re-enable as we implement them:
 };
 
 #[derive(Parser)]
@@ -64,12 +63,12 @@ pub enum Commands {
        #[command(subcommand)]
        command: FactionCommands,
    },
-   // 
-   // /// Manage systems (requires being in a multiverse project)
-   // System {
-   //     #[command(subcommand)]
-   //     command: SystemCommands,
-   // },
+   
+   /// Manage systems (requires being in a multiverse project)
+   System {
+       #[command(subcommand)]
+       command: SystemCommands,
+   },
    // 
    // /// Manage factions (requires being in a multiverse project)
    // Faction {
@@ -83,11 +82,11 @@ pub enum Commands {
    //     command: EventCommands,
    // },
 
-   // /// Manage races (requires being in a multiverse project)
-   // Race {
-   //     #[command(subcommand)]
-   //     command: RaceCommands,
-   // },
+   /// Manage races (requires being in a multiverse project)
+   Race {
+       #[command(subcommand)]
+       command: RaceCommands,
+   },
 
     /// Manage timeline configuration and dates (requires being in a multiverse project)
     Timeline {

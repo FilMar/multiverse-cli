@@ -2,17 +2,11 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum RaceCommands {
-    /// Create a new race with flexible metadata
+    /// Create a new race with unified --set for all fields
     Create {
-        /// Race name (unique identifier, e.g., 'elfo_silvano')
+        /// Race name (unique identifier)
         name: String,
-        /// Race display name (human-readable, e.g., 'Elfo Silvano')
-        #[arg(long)]
-        display_name: String,
-        /// A brief description of the race
-        #[arg(long)]
-        description: Option<String>,
-        /// Set metadata field (e.g., --set avg_lifespan=1000 --set abilities=["night_vision"])
+        /// Set any field (--set display_name="Name" --set description="Description" --set status="Active" --set lifespan=1000)
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },
@@ -39,13 +33,7 @@ pub enum RaceCommands {
     Update {
         /// Race name
         name: String,
-        /// New race display name
-        #[arg(long)]
-        display_name: Option<String>,
-        /// New race description
-        #[arg(long)]
-        description: Option<String>,
-        /// Set metadata field (e.g., --set avg_lifespan=1000 --set abilities=["night_vision"])
+        /// Set any field (--set display_name="Name" --set description="Description" --set status="Active" --set lifespan=1000)
         #[arg(long, value_parser = parse_key_val)]
         set: Vec<(String, String)>,
     },

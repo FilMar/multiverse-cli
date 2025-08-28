@@ -248,7 +248,7 @@ fn test_faction_lifecycle_complete() {
     let output = world.run_command(&[
         "faction", "update", "thieves_guild",
         "--set", "leader=New Leader",
-        "--set", "status=Under Investigation"
+        "--set", "investigation_status=Under Investigation"
     ]);
     assert!(output.status.success(), "Failed to update faction");
     
@@ -257,7 +257,7 @@ fn test_faction_lifecycle_complete() {
     assert!(output.status.success(), "Failed to get updated faction info");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("leader: \"New Leader\""));
-    assert!(stdout.contains("status: \"Under Investigation\""));
+    assert!(stdout.contains("investigation_status: \"Under Investigation\""));
     
     // Finally, delete
     let output = world.run_command(&["faction", "delete", "thieves_guild", "--force"]);

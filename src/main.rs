@@ -19,8 +19,8 @@ fn main() -> Result<()> {
         Commands::Location { command } => handle_location_command(command),
         Commands::Event { command } => handle_event_command(command),
         Commands::Faction { command } => handle_faction_command(command),
-       // Commands::System { command } => handle_system_command(command),
-       // Commands::Race { command } => handle_race_command(command),
+        Commands::System { command } => handle_system_command(command),
+        Commands::Race { command } => handle_race_command(command),
     }
 }
 
