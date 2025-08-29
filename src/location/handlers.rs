@@ -1,5 +1,6 @@
 use super::cli::LocationCommands;
 use super::models::{Location, LocationStatus};
+use crate::relations::{process_relations, EntityType};
 use anyhow::Result;
 
 pub fn handle_location_command(command: LocationCommands) -> Result<()> {
@@ -20,7 +21,11 @@ fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     let mut location = Location::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Location '{}' not found", name))?;
 
-    location.update(set_args)?;
+    // Process relations and get back non-relation fields
+    let regular_fields = process_relations(EntityType::Location(name.clone()), set_args)?;
+    
+    // Update regular fields
+    location.update(regular_fields)?;
 
     println!("✅ Location '{}' updated!", name);
     show_created_location(&location)?;
@@ -43,9 +48,17 @@ fn handle_create(name: String, mut set_args: Vec<(String, String)>) -> Result<()
         }
     }
 
-    // Use Location factory method with built-in validation
-    let mut location = Location::create_new(name.clone(), set_args)?;
+    // Separate relation fields from regular fields  
+    let (relation_fields, regular_fields) = separate_relation_fields(set_args);
+    
+    // Create location with regular fields FIRST
+    let mut location = Location::create_new(name.clone(), regular_fields)?;
     location.create()?;
+    
+    // THEN process relations after location exists in database
+    if !relation_fields.is_empty() {
+        process_relations(EntityType::Location(name.clone()), relation_fields)?;
+    }
     
     // Display success information
     show_created_location(&location)?;
@@ -165,4 +178,21 @@ fn handle_delete(name: String, force: bool) -> Result<()> {
     println!("✅ Location '{name}' deleted!");
     
     Ok(())
+}
+
+fn separate_relation_fields(set_args: Vec<(String, String)>) -> (Vec<(String, String)>, Vec<(String, String)>) {
+    let mut relation_fields = Vec::new();
+    let mut regular_fields = Vec::new();
+    
+    for (key, value) in set_args {
+        match key.as_str() {
+            "faction" => relation_fields.push((key, value)),
+            "location" => relation_fields.push((key, value)),
+            "system" => relation_fields.push((key, value)),
+            // Add more relation types here as we implement them
+            _ => regular_fields.push((key, value)),
+        }
+    }
+    
+    (relation_fields, regular_fields)
 }

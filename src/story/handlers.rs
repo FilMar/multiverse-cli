@@ -1,5 +1,6 @@
 use super::cli::StoryCommands;
 use super::models::Story;
+use crate::relations::{process_relations, EntityType};
 use anyhow::Result;
 
 pub fn handle_story_command(command: StoryCommands) -> Result<()> {
@@ -21,7 +22,8 @@ fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     let mut story = Story::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Story '{}' not found", name))?;
 
-    story.update(set_args)?;
+    let regular_fields = process_relations(EntityType::Story(name.clone()), set_args)?;
+    story.update(regular_fields)?;
 
     println!("✅ Story '{}' updated!", name);
     show_created_story(&story)?;

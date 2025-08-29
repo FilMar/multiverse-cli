@@ -36,6 +36,16 @@ impl Faction {
             &self.name
         }
     }
+    
+    /// Resolve faction name to database ID
+    pub fn resolve_id(name: &str) -> anyhow::Result<String> {
+        let conn = Self::get_database_connection()?;
+        let mut stmt = conn.prepare("SELECT id FROM factions WHERE name = ?")?;
+        let id: i32 = stmt.query_row([name], |row| {
+            row.get(0)
+        }).map_err(|_| anyhow::anyhow!("Faction not found: '{}'", name))?;
+        Ok(id.to_string())
+    }
 
     /// Count total factions
     pub fn count_total() -> anyhow::Result<i32> {

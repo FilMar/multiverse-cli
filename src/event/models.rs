@@ -41,6 +41,16 @@ impl Event {
         }
     }
 
+    /// Resolve event name to database ID
+    pub fn resolve_id(name: &str) -> anyhow::Result<String> {
+        let conn = Self::get_database_connection()?;
+        let mut stmt = conn.prepare("SELECT id FROM events WHERE name = ?")?;
+        let id: i32 = stmt.query_row([name], |row| {
+            row.get(0)
+        }).map_err(|_| anyhow::anyhow!("Event not found: '{}'", name))?;
+        Ok(id.to_string())
+    }
+
     /// Count total events
     pub fn count_total() -> anyhow::Result<i32> {
         let conn = Self::get_database_connection()?;

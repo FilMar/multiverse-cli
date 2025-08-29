@@ -21,6 +21,7 @@ fn main() -> Result<()> {
         Commands::Faction { command } => handle_faction_command(command),
         Commands::System { command } => handle_system_command(command),
         Commands::Race { command } => handle_race_command(command),
+        Commands::Query { sql } => handle_query_command(sql),
     }
 }
 
@@ -43,5 +44,10 @@ fn handle_info() -> Result<()> {
     }
     
     Ok(())
+}
+
+fn handle_query_command(sql: String) -> Result<()> {
+    println!("🔍 Executing query...");
+    database::execute_query(&sql)
 }
 

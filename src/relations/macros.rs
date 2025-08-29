@@ -1,215 +1,149 @@
-//! Composable macro system for generating relation types, parsers, and processors
-//! This eliminates boilerplate code for defining new relation types
-/// Macro to define just the struct and basic implementation
+//! Generic relation macro system inspired by entity macros
+
+/// Generic macro to define any relation between two entity types
 #[macro_export]
-macro_rules! define_relation_struct {
+macro_rules! define_relation {
     (
         $relation_name:ident,
-        {
-            $($field:ident: $field_type:ty),+ $(,)?
+        $from_entity:ident -> $to_entity:ident,
+        table: $table_name:literal,
+        from_table: $from_table:literal,
+        to_table: $to_table:literal,
+        fields: {
+            $($field_name:ident: $field_type:ty),* $(,)?
         }
     ) => {
+        use rusqlite::Connection;
+        use anyhow::Result;
+
         #[derive(Debug, Clone)]
         pub struct $relation_name {
-            $(pub $field: $field_type),+,
-            pub created_at: String,
+            pub from_id: String,
+            pub to_id: String,
+            $(pub $field_name: $field_type),*,
         }
 
         impl $relation_name {
-            pub fn new($($field: $field_type),+) -> Self {
+            /// Create new relation instance
+            pub fn new(from_id: String, to_id: String, $($field_name: $field_type),*) -> Self {
                 Self {
-                    $($field),+,
-                    created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                    from_id,
+                    to_id,
+                    $($field_name),*,
                 }
             }
-        }
-    };
-}
 
-/// Macro to implement the Relation trait
-#[macro_export]
-macro_rules! impl_relation_trait {
-    (
-        $relation_name:ident,
-        table: $table_name:literal,
-        create: $create_sql:literal,
-        key_fields: {
-            $key1:ident: $key_type1:ty,
-            $key2:ident: $key_type2:ty
-        },
-        update_fields: [$($update_field:ident),+],
-        db_struct: $db_struct:ident
-    ) => {
-        impl crate::relations::models::Relation for $relation_name {
-            fn create(&self, conn: &rusqlite::Connection) -> anyhow::Result<()> {
-                $db_struct::insert(conn, 
-                    self.$key1.clone(), 
-                    &self.$key2, 
-                    $(&self.$update_field),+
-                )
+            /// Create this relation in the database
+            pub fn create(&self) -> Result<()> {
+                let db_path = crate::world::WorldConfig::get_database_path()?;
+                let conn = crate::database::get_connection(&db_path)?;
+
+                Relations::create_relation(&conn, &self.from_id, &self.to_id, $(&self.$field_name),*)?;
+
+                // Success message will be handled by the caller
+
+                Ok(())
             }
 
-            fn update(&self, conn: &rusqlite::Connection) -> anyhow::Result<()> {
-                $db_struct::update(conn, 
-                    self.$key1.clone(), 
-                    &self.$key2, 
-                    $(&self.$update_field),+
-                )
+            /// Delete this relation from the database
+            pub fn delete(&self) -> Result<()> {
+                let db_path = crate::world::WorldConfig::get_database_path()?;
+                let conn = crate::database::get_connection(&db_path)?;
+
+                Relations::delete_relation(&conn, &self.from_id, &self.to_id)?;
+
+                println!("🗑️ Deleted relation: {} -> {}", self.from_id, self.to_id);
+
+                Ok(())
             }
 
-            fn delete(&self, conn: &rusqlite::Connection) -> anyhow::Result<()> {
-                $db_struct::delete(conn, self.$key1.clone(), &self.$key2)
-            }
-        }
-    };
-}
-
-/// Macro to generate parser functions - simplified for generic relations
-#[macro_export]
-macro_rules! define_relation_parser {
-    (
-        $parser_name:ident,
-        $relation_struct:ident,
-        format: $format:literal
-    ) => {
-        #[derive(Debug)]
-        pub struct $relation_struct {
-            pub first: String,
-            pub second: String,
-            pub third: String,
-        }
-
-        pub fn $parser_name(value: &str) -> anyhow::Result<Vec<$relation_struct>> {
-            let mut relations = Vec::new();
-            
-            for part in value.split(',') {
-                let components: Vec<&str> = part.trim().split(':').collect();
+            /// List all relations for a from_entity
+            pub fn list_for_entity(from_id: &str) -> Result<Vec<Self>> {
+                let db_path = crate::world::WorldConfig::get_database_path()?;
+                let conn = crate::database::get_connection(&db_path)?;
                 
-                if components.is_empty() {
-                    return Err(anyhow::anyhow!("Invalid format: '{}'. Expected {}", part, $format));
+                let field_list = concat!("to_id", $(", ", stringify!($field_name))*);
+                let sql = format!("SELECT {} FROM {} WHERE from_id = ?", field_list, $table_name);
+                let mut stmt = conn.prepare(&sql)?;
+
+                let rows = stmt.query_map([from_id], |row| {
+                    Ok(Self::new(
+                        from_id.to_string(),
+                        row.get::<_, String>("to_id")?,
+                        $(row.get::<_, String>(stringify!($field_name))?),*
+                    ))
+                })?;
+
+                let mut results = Vec::new();
+                for row in rows {
+                    results.push(row?);
                 }
                 
-                let first = components[0].to_string();
-                let second = components.get(1).unwrap_or(&"").to_string();
-                let third = components.get(2).unwrap_or(&"").to_string();
-                
-                relations.push($relation_struct {
-                    first,
-                    second,
-                    third,
-                });
+                Ok(results)
             }
-            
-            Ok(relations)
         }
-    };
-}
 
-/// Macro to generate processor function - uses the same parameters from complete_relation
-#[macro_export]
-macro_rules! define_relation_processor {
-    (
-        $processor_name:ident,
-        $parser_name:ident,
-        $relation_name:ident,
-        init_fn: $init_fn:path,
-        key_fields: {
-            $($key_name:ident: $key_type:ty),+
-        },
-        fields: {
-            $($field_name:ident: $field_type:ty),+
-        }
-    ) => {
-        pub fn $processor_name(entity_id: &str, value: &str) -> anyhow::Result<()> {
-            let db_path = crate::world::WorldConfig::get_database_path()?;
-            let conn = crate::database::get_connection(&db_path)?;
-            
-            $init_fn(&conn)?;
-            
-            let relations = $parser_name(value)?;
-            
-            for rel in relations {
-                // Create relation with proper parameter mapping
-                // This assumes: first key = entity_id, second key = rel.first, then additional fields
-                let relation_obj = $relation_name::new(
-                    entity_id.parse().unwrap_or_else(|_| entity_id.to_string() as _),  // Try parse or use as string
-                    rel.first.clone(),      
-                    rel.second.clone(),     
-                    rel.third.clone()       
+
+        pub struct Relations;
+
+        impl Relations {
+            pub fn init_table(conn: &Connection) -> Result<()> {
+                let field_defs = concat!($(stringify!($field_name), " TEXT, ",)*);
+                let sql = format!(
+                    "CREATE TABLE IF NOT EXISTS {} (
+                        from_id TEXT NOT NULL,
+                        to_id TEXT NOT NULL,
+                        {}
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (from_id, to_id),
+                        FOREIGN KEY (from_id) REFERENCES {} (id),
+                        FOREIGN KEY (to_id) REFERENCES {} (id)
+                    )",
+                    $table_name,
+                    field_defs,
+                    $from_table,
+                    $to_table
                 );
                 
-                match relation_obj.create(&conn) {
-                    Ok(_) => {
-                        println!("✅ Added relation: {} ↔ {}", entity_id, rel.first);
-                    }
-                    Err(_) => {
-                        relation_obj.update(&conn)?;
-                        println!("✅ Updated relation: {} ↔ {}", entity_id, rel.first);
-                    }
-                }
+                conn.execute(&sql, [])?;
+                Ok(())
             }
-            
-            Ok(())
+
+            pub fn create_relation(
+                conn: &Connection,
+                from_id: &str,
+                to_id: &str,
+                $($field_name: &$field_type),*
+            ) -> Result<()> {
+                let mut field_names = vec!["from_id", "to_id"];
+                let mut placeholders = vec!["?", "?"];
+                let mut values: Vec<&dyn rusqlite::ToSql> = vec![&from_id, &to_id];
+
+                $(
+                    field_names.push(stringify!($field_name));
+                    placeholders.push("?");
+                    values.push($field_name);
+                )*
+
+                field_names.push("created_at");
+                placeholders.push("CURRENT_TIMESTAMP");
+
+                let sql = format!(
+                    "INSERT INTO {} ({}) VALUES ({})",
+                    $table_name,
+                    field_names.join(", "),
+                    placeholders.join(", ")
+                );
+
+                conn.execute(&sql, &values[..])?;
+                Ok(())
+            }
+
+            pub fn delete_relation(conn: &Connection, from_id: &str, to_id: &str) -> Result<()> {
+                let sql = format!("DELETE FROM {} WHERE from_id = ? AND to_id = ?", $table_name);
+                conn.execute(&sql, [from_id, to_id])?;
+                Ok(())
+            }
         }
     };
 }
-
-/// Complete macro that uses all the composable parts
-#[macro_export]
-macro_rules! define_complete_relation {
-    (
-        $relation_name:ident,
-        table: $table_name:literal,
-        key_fields: {
-            $key1:ident: $key_type1:ty,
-            $key2:ident: $key_type2:ty
-        },
-        fields: {
-            $($field:ident: $field_type:ty),+ $(,)?
-        },
-        sql: $create_sql:literal,
-        update_fields: [$($update_field:ident),+],
-        parser: {
-            name: $parser_name:ident,
-            struct: $relation_struct:ident,
-            format: $format:literal
-        },
-        processor: {
-            name: $processor_name:ident,
-            init_fn: $init_fn:path
-        },
-        db_struct: $db_struct:ident
-    ) => {
-        $crate::define_relation_struct!($relation_name, { 
-            $key1: $key_type1,
-            $key2: $key_type2,
-            $($field: $field_type),+ 
-        });
-        
-        $crate::impl_relation_trait!($relation_name, 
-            table: $table_name, 
-            create: $create_sql,
-            key_fields: {
-                $key1: $key_type1,
-                $key2: $key_type2
-            },
-            update_fields: [$($update_field),+],
-            db_struct: $db_struct
-        );
-        
-        $crate::define_relation_parser!($parser_name, $relation_struct, format: $format);
-        
-        $crate::define_relation_processor!($processor_name, $parser_name, $relation_name, 
-            init_fn: $init_fn,
-            key_fields: {
-                $key1: $key_type1,
-                $key2: $key_type2
-            },
-            fields: {
-                $($field: $field_type),+
-            }
-        );
-    };
-}
-
-// Macro exports are handled by #[macro_export] - no manual re-exports needed

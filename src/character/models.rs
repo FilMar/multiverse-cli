@@ -36,4 +36,14 @@ impl Character {
             &self.name
         }
     }
+    
+    /// Resolve character name to database ID
+    pub fn resolve_id(name: &str) -> anyhow::Result<String> {
+        let conn = Self::get_database_connection()?;
+        let mut stmt = conn.prepare("SELECT id FROM characters WHERE name = ?")?;
+        let id: i32 = stmt.query_row([name], |row| {
+            row.get(0)
+        }).map_err(|_| anyhow::anyhow!("Character not found: '{}'", name))?;
+        Ok(id.to_string())
+    }
 }

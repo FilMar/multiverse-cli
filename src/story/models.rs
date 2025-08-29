@@ -41,6 +41,16 @@ impl Story {
         }
     }
 
+    /// Resolve story name to database ID
+    pub fn resolve_id(name: &str) -> anyhow::Result<String> {
+        let conn = Self::get_database_connection()?;
+        let mut stmt = conn.prepare("SELECT id FROM stories WHERE name = ?")?;
+        let id: i32 = stmt.query_row([name], |row| {
+            row.get(0)
+        }).map_err(|_| anyhow::anyhow!("Story not found: '{}'", name))?;
+        Ok(id.to_string())
+    }
+
     /// Get story directory path within world
     pub fn get_story_path(&self, world_root: &std::path::Path) -> std::path::PathBuf {
         world_root.join("stories").join(&self.name)

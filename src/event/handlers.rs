@@ -1,5 +1,6 @@
 use super::cli::EventCommands;
 use super::models::Event;
+use crate::relations::{process_relations, EntityType};
 use anyhow::Result;
 
 pub fn handle_event_command(command: EventCommands) -> Result<()> {
@@ -15,23 +16,27 @@ pub fn handle_event_command(command: EventCommands) -> Result<()> {
     }
 }
 
-fn handle_update(name: String, mut set_args: Vec<(String, String)>) -> Result<()> {
+fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("🔄 Updating event '{name}'");
 
     let mut event = Event::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Event '{}' not found", name))?;
 
+    // Process relations and get back non-relation fields
+    let regular_fields = process_relations(EntityType::Event(name.clone()), set_args)?;
+    
     // Normalize field names: title -> display_name
-    for (key, _) in &mut set_args {
+    let mut regular_fields = regular_fields;
+    for (key, _) in &mut regular_fields {
         if key == "title" {
             *key = "display_name".to_string();
         }
     }
 
     // Check if date is being updated
-    let date_update = set_args.iter().find(|(k, _)| k == "date").cloned();
+    let date_update = regular_fields.iter().find(|(k, _)| k == "date").cloned();
     
-    event.update(set_args)?;
+    event.update(regular_fields)?;
     
     // If date was updated, recalculate sort_key
     if let Some((_, date_str)) = date_update {
@@ -46,7 +51,7 @@ fn handle_update(name: String, mut set_args: Vec<(String, String)>) -> Result<()
     Ok(())
 }
 
-fn handle_create(name: String, mut set_args: Vec<(String, String)>) -> Result<()> {
+fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     let title = set_args.iter()
         .find(|(k, _)| k == "title" || k == "display_name")
         .map(|(_, v)| v.as_str())
@@ -54,15 +59,19 @@ fn handle_create(name: String, mut set_args: Vec<(String, String)>) -> Result<()
     
     println!("📅 Creating event '{name}' ({})", title);
 
+    // Separate relation fields from regular fields  
+    let (relation_fields, regular_fields) = separate_relation_fields(set_args);
+    
     // Normalize field names: title -> display_name
-    for (key, _) in &mut set_args {
+    let mut regular_fields = regular_fields;
+    for (key, _) in &mut regular_fields {
         if key == "title" {
             *key = "display_name".to_string();
         }
     }
 
     // Use Event factory method with built-in validation
-    let mut event = Event::create_new(name.clone(), set_args)?;
+    let mut event = Event::create_new(name.clone(), regular_fields)?;
     
     // If date was provided, parse it and update sort_key BEFORE creating
     if let Some(date_value) = event.metadata.get("date") {
@@ -72,6 +81,11 @@ fn handle_create(name: String, mut set_args: Vec<(String, String)>) -> Result<()
     }
     
     event.create()?;
+    
+    // THEN process relations after event exists in database
+    if !relation_fields.is_empty() {
+        process_relations(EntityType::Event(name.clone()), relation_fields)?;
+    }
     
     // Display success information
     show_created_event(&event)?;
@@ -230,4 +244,22 @@ fn handle_timeline() -> Result<()> {
     }
     
     Ok(())
+}
+
+/// Separate relation fields from regular event fields
+fn separate_relation_fields(set_args: Vec<(String, String)>) -> (Vec<(String, String)>, Vec<(String, String)>) {
+    let mut relation_fields = Vec::new();
+    let mut regular_fields = Vec::new();
+    
+    for (key, value) in set_args {
+        match key.as_str() {
+            "character" => relation_fields.push((key, value)),
+            "location" => relation_fields.push((key, value)),
+            "faction" => relation_fields.push((key, value)),
+            // Add more relation types here as we implement them
+            _ => regular_fields.push((key, value)),
+        }
+    }
+    
+    (relation_fields, regular_fields)
 }

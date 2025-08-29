@@ -1,5 +1,6 @@
 use super::cli::CharacterCommands;
 use super::models::{Character, CharacterStatus};
+use crate::relations::{process_relations, EntityType};
 use anyhow::Result;
 
 pub fn handle_character_command(command: CharacterCommands) -> Result<()> {
@@ -20,7 +21,11 @@ fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     let mut character = Character::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Character '{}' not found", name))?;
 
-    character.update(set_args)?;
+    // Process relations and get back non-relation fields
+    let regular_fields = process_relations(EntityType::Character(name.clone()), set_args)?;
+    
+    // Update regular fields
+    character.update(regular_fields)?;
 
     println!("✅ Character '{}' updated!", name);
     show_created_character(&character)?;
@@ -31,8 +36,17 @@ fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
 fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("👤 Creating character '{name}'");
     
-    let mut character = Character::create_new(name.clone(), set_args)?;
+    // Separate relation fields from regular fields  
+    let (relation_fields, regular_fields) = separate_relation_fields(set_args);
+    
+    // Create character with regular fields FIRST
+    let mut character = Character::create_new(name.clone(), regular_fields)?;
     character.create()?;
+    
+    // THEN process relations after character exists in database
+    if !relation_fields.is_empty() {
+        process_relations(EntityType::Character(name.clone()), relation_fields)?;
+    }
     
     show_created_character(&character)?;
     
@@ -130,4 +144,24 @@ fn handle_delete(name: String, force: bool) -> Result<()> {
     println!("✅ Character '{name}' deleted!");
     
     Ok(())
+}
+
+/// Separate relation fields from regular character fields
+fn separate_relation_fields(set_args: Vec<(String, String)>) -> (Vec<(String, String)>, Vec<(String, String)>) {
+    let mut relation_fields = Vec::new();
+    let mut regular_fields = Vec::new();
+    
+    for (key, value) in set_args {
+        match key.as_str() {
+            "episode" => relation_fields.push((key, value)),
+            "location" => relation_fields.push((key, value)),
+            "faction" => relation_fields.push((key, value)),
+            "race" => relation_fields.push((key, value)),
+            "system" => relation_fields.push((key, value)),
+            // Add more relation types here as we implement them
+            _ => regular_fields.push((key, value)),
+        }
+    }
+    
+    (relation_fields, regular_fields)
 }

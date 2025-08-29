@@ -1,5 +1,6 @@
 use super::cli::SystemCommands;
 use super::models::{System, SystemStatus};
+use crate::relations::{process_relations, EntityType};
 use anyhow::Result;
 
 pub fn handle_system_command(command: SystemCommands) -> Result<()> {
@@ -20,7 +21,8 @@ fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     let mut system = System::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("System '{}' not found", name))?;
 
-    system.update(set_args)?;
+    let regular_fields = process_relations(EntityType::System(name.clone()), set_args)?;
+    system.update(regular_fields)?;
 
     println!("✅ System '{}' updated!", name);
     show_created_system(&system)?;

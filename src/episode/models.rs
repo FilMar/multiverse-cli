@@ -269,4 +269,29 @@ impl Episode {
         let total: i32 = stmt.query_row([story_name], |row| row.get(0))?;
         Ok(total)
     }
+    
+    /// Resolve episode "story:number" to database ID
+    pub fn resolve_id(identifier: &str) -> anyhow::Result<String> {
+        let parts: Vec<&str> = identifier.split(':').collect();
+        if parts.len() != 2 {
+            return Err(anyhow::anyhow!(
+                "Invalid episode format: '{}'. Expected 'story_name:episode_number'", 
+                identifier
+            ));
+        }
+        
+        let story_name = parts[0];
+        let episode_number: i32 = parts[1].parse()
+            .map_err(|_| anyhow::anyhow!("Invalid episode number: '{}'", parts[1]))?;
+        
+        let conn = Self::get_database_connection()?;
+        let mut stmt = conn.prepare("SELECT id FROM episodes WHERE story = ? AND number = ?")?;
+        let id: i32 = stmt.query_row([story_name, &episode_number.to_string()], |row| {
+            row.get(0)
+        }).map_err(|_| anyhow::anyhow!(
+            "Episode not found: story '{}', episode {}", story_name, episode_number
+        ))?;
+        
+        Ok(id.to_string())
+    }
 }

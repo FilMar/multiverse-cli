@@ -1,5 +1,6 @@
 use super::cli::RaceCommands;
 use super::models::{Race, RaceStatus};
+use crate::relations::{process_relations, EntityType};
 use anyhow::{Result, Context};
 
 pub fn handle_race_command(command: RaceCommands) -> Result<()> {
@@ -19,8 +20,17 @@ pub fn handle_race_command(command: RaceCommands) -> Result<()> {
 fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("✨ Creating race: {}", name);
 
-    let mut race = Race::create_new(name.clone(), set_args)?;
+    // Separate relation fields from regular fields  
+    let (relation_fields, regular_fields) = separate_relation_fields(set_args);
+    
+    // Create race with regular fields FIRST
+    let mut race = Race::create_new(name.clone(), regular_fields)?;
     race.create().context("Failed to create race in database")?;
+    
+    // THEN process relations after race exists in database
+    if !relation_fields.is_empty() {
+        process_relations(EntityType::Race(name.clone()), relation_fields)?;
+    }
 
     show_created_race(&race)?;
     Ok(())
@@ -65,6 +75,21 @@ fn handle_list() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn separate_relation_fields(set_args: Vec<(String, String)>) -> (Vec<(String, String)>, Vec<(String, String)>) {
+    let mut relation_fields = Vec::new();
+    let mut regular_fields = Vec::new();
+    
+    for (key, value) in set_args {
+        match key.as_str() {
+            "system" => relation_fields.push((key, value)),
+            // Add more relation types here as we implement them
+            _ => regular_fields.push((key, value)),
+        }
+    }
+    
+    (relation_fields, regular_fields)
 }
 
 fn handle_info(name: String) -> Result<()> {
@@ -125,7 +150,11 @@ fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     let mut race = Race::get(&name)?
         .ok_or_else(|| anyhow::anyhow!("Race '{}' not found", name))?;
 
-    race.update(set_args)?;
+    // Process relations and get back non-relation fields
+    let regular_fields = process_relations(EntityType::Race(name.clone()), set_args)?;
+    
+    // Update regular fields
+    race.update(regular_fields)?;
 
     println!("✅ Race '{}' updated!", name);
     show_created_race(&race)?;

@@ -14,14 +14,14 @@ Una CLI per gestire progetti narrativi complessi con focus su worldbuilding e st
 
 - 🗄️ **Database SQLite** completo per tutti i metadati
 - 📚 **Story & Episode Management** con tipi configurabili e stati
-- 👥 **Character & Location Management** con metadati JSON completamente flessibili  
-- 🔮 **System & Faction Management** per elementi di worldbuilding
-- 🧙 **Race Management** per gestione razze e specie del mondo
+- 🏗️ **Worldbuilding Completo**: Personaggi, Luoghi, Razze, Fazioni, Sistemi ed Eventi
+- 🔗 **Relationship Management** tra tutte le entità, gestito via metadata
 - 📅 **Event Management** con supporto per timeline cronologica
 - ✏️ **Full CRUD** per tutte le entità (Create, Read, Update, Delete)
-- 🔗 **Git integration** per sincronizzazione repository
+- 🧩 **Architettura Metadata-First**: Massima flessibilità con campi personalizzati tramite `--set`
+- 🕐 **Timeline Configurabile** per calendari personalizzati
 - ⚙️ **Configuration System** TOML per personalizzazione completa
-- 🧩 **Metadata flessibili** - Tutti i campi descrittivi e tipi gestiti via `--set key=value`
+- 🔗 **Git integration** per sincronizzazione repository
 
 ## 🚀 Quick Start
 
@@ -86,17 +86,16 @@ wandering-sun/               # Repository mondo
 
 ### Database Schema
 
-Il progetto utilizza **SQLite** per gestire metadati:
+Il progetto utilizza **SQLite** per gestire tutti i metadati in un singolo file `world.db`.
+L'architettura è **metadata-first**: invece di avere colonne rigide, la maggior parte dei dati è memorizzata in campi JSON, permettendo a ogni mondo di definire il proprio schema.
 
-- **`stories`** - Storie con metadata JSON configurabile
-- **`episodes`** - Episodi individuali con stati e metadati
-- **`characters`** - Personaggi con metadata flessibili e stati
-- **`locations`** - Luoghi con tipologie e metadata configurabili
-- **`systems`** - Sistemi del mondo (magia, tecnologia, etc.) con metadata
-- **`factions`** - Fazioni e organizzazioni con stati e metadata
-- **`races`** - Razze e specie con stati specializzati e metadata
-- **`events`** - Eventi storici con date e timeline cronologica
-- **`episode_characters`** - Relazioni tra episodi e personaggi
+- **Entità Principali**: `stories`, `episodes`, `characters`, `locations`, `systems`, `factions`, `races`, `events`.
+- **Tabelle di Relazione**: Vengono create dinamicamente per gestire le connessioni tra entità, ad esempio:
+    - `character_episodes`
+    - `character_locations`
+    - `character_factions`
+    - `event_characters`
+    - ... e molte altre.
 
 ## 🎮 Comandi CLI
 
@@ -140,70 +139,40 @@ multiverse event update <nome> --set date=<data>
 multiverse event timeline          # Mostra gli eventi in ordine cronologico
 ```
 
-**Note**: Comandi per validazione della coerenza, export multi-formato e analisi avanzata sono in roadmap.
+### 🔗 Gestione Relazioni (tramite --set)
 
-## 🔮 Roadmap Features
-
-### 📋 Prossime Implementazioni
-
-- **Content Analysis**: Word count automatico e cross-referencing migliorato.
-- **Lore Validation**: Sistema di validazione interattiva per la coerenza narrativa.
-- **Export System**: Export multi-formato per piattaforme diverse (YouTube, etc.).
-- **AI Collaboration**: Strumenti di integrazione con AI per analisi e generazione.
-
-## 🛠️ Sviluppo
-
-### Requisiti
-
-- Rust 1.70+
-- SQLite 3.35+
-- Git
-
-### Build Development
+Le relazioni non hanno comandi dedicati, ma vengono gestite tramite speciali parametri `--set` durante la creazione e l'aggiornamento delle entità. È possibile assegnare più relazioni separando i nomi con una virgola.
 
 ```bash
-# Clone e setup
-git clone https://github.com/user/multiverse-cli
-cd multiverse-cli
+# Associa un personaggio a un luogo e una fazione
+multiverse character update fenrik --set location=glass_gardens --set faction=sylvan_guardians
 
-# Run tests
-cargo test
+# Crea un evento con personaggi e luoghi associati
+multiverse event create "the_summit" --set character=fenrik,lyra --set location=citadel
 
-# Build release
-cargo build --release
+# Crea una relazione tra due luoghi (es. un luogo contenuto in un altro)
+multiverse location update "inner_sanctum" --set location=citadel
 ```
 
-### Contributing
+**Note**: Comandi per validazione della coerenza, export multi-formato e analisi avanzata sono in roadmap.
 
-1. Fork repository
-2. Crea feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+## 🗺️ Roadmap
 
-## 📋 Roadmap
+Il progetto ha una base solida e completa. Le prossime implementazioni si concentreranno su analisi dei contenuti e funzionalità avanzate.
 
-### Fase 1: Core (Completata) ✅
-- [x] CLI base con comandi world/story/episode
-- [x] Database SQLite con schema flessibile
-- [x] Story management con tipi configurabili
-- [x] Episode management con stati
-- [x] Git integration completa
-- [x] Configuration system TOML
+### Fase 1: Content Analysis (Priorità Alta)
+- **Word Count**: Parsing automatico dei file Markdown per arricchire `world info`.
+- **Cross-referencing Migliorato**: Linking automatico avanzato di entità negli episodi.
+- **UI per Relazioni**: Comandi per visualizzare e gestire le relazioni tra entità.
 
-### Fase 2: Worldbuilding (Completata) ✅
-- [x] Characters database + CLI commands
-- [x] Locations database + CLI commands  
-- [x] Systems database + CLI commands
-- [x] Factions database + CLI commands
-- [x] Races database + CLI commands
-- [x] Events database + CLI commands
-- [x] Relazioni episodi-personaggi
+### Fase 2: Advanced Features (Priorità Media)
+- **Lore Validation**: Sistema di validazione interattiva per la coerenza narrativa (`episode review`).
+- **Comandi per Timeline**: Gestione di ere e calendari direttamente da CLI.
 
-### Fase 3: Advanced Features 🚧
-- [ ] Lore validation system
-- [ ] Export multi-formato
-- [ ] AI collaboration tools
+### Fase 3: Ecosystem (Priorità Bassa)
+- **Export System**: Esportazione multi-formato (es. per YouTube, Spotify) con template.
+- **AI Collaboration**: Integrazione con LLM per assistenza alla scrittura e analisi.
+- **Query System**: Interfaccia per eseguire query SQL dirette al database.
 
 ## 📄 Licenza
 

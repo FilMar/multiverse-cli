@@ -1,5 +1,6 @@
 use super::cli::EpisodeCommands;
 use super::models::{Episode, EpisodeStatus};
+use crate::relations::{process_relations, EntityType};
 use anyhow::Result;
 
 pub fn handle_episode_command(command: EpisodeCommands) -> Result<()> {
@@ -20,7 +21,9 @@ fn handle_update(story_name: String, episode_number: i32, set_args: Vec<(String,
     let mut episode = Episode::get(&story_name, &episode_number)?
         .ok_or_else(|| anyhow::anyhow!("Episode {} not found in story '{}'", episode_number, story_name))?;
 
-    episode.update(set_args)?;
+    let episode_id = format!("{}:{}", story_name, episode_number);
+    let regular_fields = process_relations(EntityType::Episode(episode_id), set_args)?;
+    episode.update(regular_fields)?;
 
     println!("✅ Episode {} updated!", episode.number);
     handle_info(story_name, episode_number)?;

@@ -95,6 +95,12 @@ pub enum Commands {
     },
 
     
+    /// Execute SQL SELECT queries on the database
+    Query {
+        /// The SQL SELECT query to execute
+        sql: String,
+    },
+
     /// Show project information
     Info,
 }

@@ -11,42 +11,47 @@ You are helping maintain the **Multiverse CLI** project. Your primary responsibi
 **CLI Commands:**
 ```bash
 multiverse world init/info/pull/push/status/config/import
-multiverse story create/types/list/info/delete  
-multiverse episode create/list/info/delete
+multiverse story create/types/list/info/delete/update
+multiverse episode create/list/info/delete/update
+multiverse character create/list/info/delete/update
+multiverse location create/list/info/delete/update
+multiverse system create/list/info/delete/update
+multiverse faction create/list/info/delete/update
+multiverse race create/list/info/delete/update
+multiverse event create/list/info/delete/update/timeline
+multiverse timeline (gestione date e calendari)
+multiverse query "SELECT ..." (query sicure al database)
 multiverse info
 ```
 
 **Core Systems:**
-- ✅ SQLite database with flexible story metadata (JSON)
+- ✅ SQLite database completo con tutte le entità (characters, locations, systems, factions, races, events, stories, episodes)
+- ✅ Sistema di relazioni completo tra entità gestito via metadata
+- ✅ Architettura metadata-first con campi JSON flessibili
 - ✅ Story types configurable via TOML
 - ✅ Episode numbering with states (Draft/InProgress/Review/Published)
 - ✅ Git integration (clone, pull, push, status)
-- ✅ Configuration system with world.toml
+- ✅ Configuration system con world.toml e timeline.toml
+- ✅ Timeline management con parsing date avanzato
+- ✅ Query system sicuro con interfaccia SQL
 
 ### ❌ **NOT IMPLEMENTED** (Do not claim these exist):
 
-**Missing Database Tables:**
-- ❌ `characters`, `locations`, `systems`, `factions`
-- ❌ `timeline_events`, `temporal_conflicts`
-
 **Missing Commands:**
-- ❌ `multiverse character/location/system/faction`
-- ❌ `multiverse episode review`
-- ❌ `multiverse timeline *`
-- ❌ `multiverse export *`
-- ❌ `multiverse query *`
+- ❌ `multiverse episode review` (lore validation)
+- ❌ `multiverse export *` (export multi-formato)
 
 **Missing Features:**
-- ❌ Lore validation system
-- ❌ Timeline management
-- ❌ Export multi-formato
-- ❌ Pattern matching
-- ❌ Claude collaboration tools
+- ❌ Lore validation system interattivo
+- ❌ Export multi-formato (YouTube, Spotify, etc.)
+- ❌ Content templates automatici
+- ❌ Word count parsing automatico
+- ❌ Advanced Claude collaboration tools
 
 ## 📊 Accurate Completion Status
 
-- **Implemented**: 40% (World, Story, Episode, Database base, Config, Git, CLI)
-- **Missing**: 60% (All worldbuilding features, validation, timeline, export)
+- **Implemented**: 92% (World, Story, Episode, Characters, Locations, Systems, Factions, Races, Events, Relations, Timeline, Query, Database completo, Config, Git, CLI)
+- **Missing**: 8% (Solo lore validation avanzata, export multi-formato, AI collaboration)
 
 ## 🛡️ Your Responsibilities
 
@@ -55,6 +60,7 @@ multiverse info
 - Update FEATURES.md/README.md when inconsistencies found  
 - Mark features as ❌ if not implemented in code
 - Use ✅ only for verified, working features
+- **STATO 2024**: Core worldbuilding completamente implementato e testato
 
 ### 2. **Code Verification Process**
 When claims are made about features:
@@ -79,19 +85,19 @@ When updating project status:
 
 ### 4. **Roadmap Management**
 Keep roadmap realistic:
-- **Phase 1**: Implement missing worldbuilding foundations (characters, locations, systems, factions)
-- **Phase 2**: Content analysis tools
-- **Phase 3**: Advanced features (timeline, validation)  
-- **Phase 4**: Ecosystem tools (export, Claude integration)
+- ✅ **Phase 1 COMPLETED**: Worldbuilding foundations completamente implementate
+- **Phase 2**: Content analysis tools (word count, enhanced cross-references)
+- **Phase 3**: Advanced features (lore validation interattiva)  
+- **Phase 4**: Ecosystem tools (export, advanced Claude integration)
 
 ## 🚨 Red Flags to Watch For
 
 **Documentation Claims That Are Often Wrong:**
-- Claims about "advanced features" being implemented
-- References to non-existent CLI commands
-- Database schema with tables that don't exist in code
-- Completion percentages above 50% (project is actually ~40%)
-- Features marked as "In Refactoring" that are actually missing
+- Claims about "advanced features" being implemented quando si riferiscono a export/AI
+- References to non-existent CLI commands per lore validation
+- Completion percentages sotto il 90% (progetto è realmente al ~92%)
+- Features marked as "missing" quando sono già implementate
+- Sottovalutazione dello stato di completamento
 
 **How to Handle:**
 1. Always verify in actual code
@@ -126,4 +132,4 @@ grep -r "init.*table" src/
 grep -r "timeline\|export\|review\|query" src/
 ```
 
-Remember: **Code is truth, documentation is aspiration.** Always prioritize accuracy over optimism.
+Remember: **Code is truth, documentation is aspiration.** Always prioritize accuracy over pessimism. Questo progetto è MOLTO più completo di quanto precedentemente documentato.

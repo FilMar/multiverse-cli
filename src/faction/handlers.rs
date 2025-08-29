@@ -1,5 +1,6 @@
 use super::cli::FactionCommands;
 use super::models::Faction;
+use crate::relations::{process_relations, EntityType};
 use anyhow::Result;
 
 pub fn handle_faction_command(command: FactionCommands) -> Result<()> {
@@ -27,7 +28,8 @@ fn handle_update(name: String, mut set_args: Vec<(String, String)>) -> Result<()
         }
     }
 
-    faction.update(set_args)?;
+    let regular_fields = process_relations(EntityType::Faction(name.clone()), set_args)?;
+    faction.update(regular_fields)?;
 
     println!("✅ Faction '{}' updated!", name);
     show_created_faction(&faction)?;

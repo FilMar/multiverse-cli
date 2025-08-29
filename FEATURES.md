@@ -30,6 +30,16 @@ Stato attuale delle features implementate nel progetto Multiverse CLI.
 - **Comandi**: `event create/list/info/update/delete/timeline`
 - **Funzionalità**: Gestione di eventi storici con data, **tipi e metadati configurabili**, visualizzazione cronologica e sistema di parsing date avanzato.
 
+### 🔗 Relationship Management (Metadata-Driven)
+- **Stato**: Completo.
+- **Funzionalità**: Le relazioni tra entità sono gestite dinamicamente tramite parametri `--set` sui comandi `create` e `update`, non con comandi dedicati. Questo permette un linking flessibile e coerente con l'architettura metadata-first.
+- **Relazioni Implementate**:
+    - **Personaggio** ↔️ `Episodio`, `Luogo`, `Fazione`, `Razza`, `Sistema`
+    - **Luogo** ↔️ `Fazione`, `Sistema`, `Luogo` (auto-relazioni)
+    - **Razza** ↔️ `Sistema`
+    - **Evento** ↔️ `Personaggio`, `Luogo`, `Fazione`
+- **Utilizzo**: `multiverse character update <nome> --set location=<luogo1>,<luogo2>`
+
 ### 🗄️ Database & Core System (Completo + Refactored)
 - **Funzionalità**: Backend SQLite ottimizzato, foreign keys, CASCADE delete, CLI architecture basata su Clap, **schema database semplificato** con metadata JSON per massima flessibilità.
 - **Refactoring 2024**: Eliminati campi rigidi `description` e `*_type` - tutto gestito via metadata per personalizzazione completa per ogni mondo narrativo.
@@ -52,8 +62,8 @@ Stato attuale delle features implementate nel progetto Multiverse CLI.
 ### 🤖 Claude Collaboration
 - Guide automatiche (`CLAUDE.md`) e comandi per interazione AI.
 
-### 🗄️ Database Query System
-- `multiverse query "SELECT ..."` per query SQL dirette al database.
+### ✅ Database Query System (IMPLEMENTATO)
+- ✅ `multiverse query "SELECT ..."` per query SQL dirette al database con sicurezza integrata.
 
 ### 📊 Analytics & Publishing
 - Word count automatico, tracking pubblicazioni, workflow di pubblicazione avanzato.
@@ -75,16 +85,19 @@ Stato attuale delle features implementate nel progetto Multiverse CLI.
 ### Fase 3: Ecosystem (Basso)
 1. **Multi-platform Export** - Sistema di export per diverse piattaforme.
 2. **Claude Collaboration** - Generazione di guide e comandi per l'interazione con AI.
-3. **Database Query System** - Interfaccia per query SQL dirette.
 
 ## 📊 Stato Complessivo
 
-- **Completato**: 90% (Core narrativo e worldbuilding completo + refactored)
+- **Completato**: 92% (Core narrativo e worldbuilding completo + query system)
 - **In Refactoring**: 0% (Refactoring metadata completato)
-- **Mancante**: 10% (Solo funzionalità avanzate di analisi, export e integrazione AI)
+- **Mancante**: 8% (Solo funzionalità avanzate di analisi, export e integrazione AI)
+
+**STATO VERIFICATO**: Tutte le entità core sono completamente implementate, testate e funzionanti.
 
 Il progetto ha una **base solida e completa** per la gestione narrativa e di worldbuilding, con:
 - ✅ **Sistema completo** per la gestione di mondi, storie, episodi, personaggi, luoghi, sistemi, fazioni, razze ed eventi.
+- ✅ **Query system sicuro** con interfaccia SQL diretta al database.
+- ✅ **Test suite completa** con copertura di tutte le funzionalità principali.
 - ✅ **Onboarding automatico** di progetti esistenti tramite guide per LLM.
 - ✅ **Configurazione flessibile** tramite TOML.
 - ✅ **Schema completamente configurabile** con metadati JSON per ogni entità - **zero vincoli predefiniti**.

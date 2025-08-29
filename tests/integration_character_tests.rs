@@ -71,6 +71,16 @@ impl TestWorld {
     }
 }
 
+fn setup_races(world: &TestWorld) {
+    world.run_command_success(&["race", "create", "Man"]);
+    world.run_command_success(&["race", "create", "Hobbit"]);
+    world.run_command_success(&["race", "create", "Elf"]);
+    world.run_command_success(&["race", "create", "Dwarf"]);
+    world.run_command_success(&["race", "create", "Maiar"]);
+    world.run_command_success(&["race", "create", "Nazgûl"]);
+    world.run_command_success(&["race", "create", "Half-elf"]);
+}
+
 #[test]
 fn test_middle_earth_world_initialization() {
     let world = TestWorld::new();
@@ -85,6 +95,7 @@ fn test_middle_earth_world_initialization() {
 #[test]
 fn test_create_aragorn() {
     let world = TestWorld::new();
+    setup_races(&world);
     
     // Create Aragorn, Heir of Isildur
     let output = world.run_command_success(&[
@@ -99,7 +110,8 @@ fn test_create_aragorn() {
     
     assert!(output.contains("Created Character 'aragorn'"));
     assert!(output.contains("Aragorn, son of Arathorn"));
-    assert!(output.contains("race: \"Man\""));
+    let query_output = world.run_command_success(&["query", "SELECT r.name as race_name FROM character_race_relations cr JOIN characters c ON cr.from_id = c.id JOIN races r ON cr.to_id = r.id WHERE c.name = 'aragorn'"]);
+    assert!(query_output.contains("Man"));
     assert!(output.contains("kingdom: \"Gondor\""));
     assert!(output.contains("weapon: \"Andúril\""));
 }
@@ -107,6 +119,7 @@ fn test_create_aragorn() {
 #[test]
 fn test_create_fellowship_members() {
     let world = TestWorld::new();
+    setup_races(&world);
     
     // Create the Fellowship of the Ring
     world.run_command_success(&[
@@ -159,6 +172,7 @@ fn test_create_fellowship_members() {
 #[test]
 fn test_boromir_lifecycle() {
     let world = TestWorld::new();
+    setup_races(&world);
     
     // Create Boromir of Gondor
     world.run_command_success(&[
@@ -196,6 +210,7 @@ fn test_boromir_lifecycle() {
 #[test]
 fn test_sauron_and_evil_characters() {
     let world = TestWorld::new();
+    setup_races(&world);
     
     // Create the Dark Lord
     world.run_command_success(&[
@@ -243,6 +258,7 @@ fn test_sauron_and_evil_characters() {
 #[test]
 fn test_hobbit_characters() {
     let world = TestWorld::new();
+    setup_races(&world);
     
     // Create the four hobbit members of the Fellowship
     world.run_command_success(&[
@@ -300,6 +316,8 @@ fn test_hobbit_characters() {
 #[test]
 fn test_character_status_transitions() {
     let world = TestWorld::new();
+    setup_races(&world);
+    world.run_command_success(&["location", "create", "Bridge of Khazad-dûm"]);
     
     // Create Gandalf and track his transformation
     world.run_command_success(&[
@@ -340,6 +358,7 @@ fn test_character_status_transitions() {
 #[test]
 fn test_complex_character_relationships() {
     let world = TestWorld::new();
+    setup_races(&world);
     
     // Create Denethor and his sons
     world.run_command_success(&[
@@ -375,6 +394,7 @@ fn test_complex_character_relationships() {
 #[test]
 fn test_middle_earth_full_workflow() {
     let world = TestWorld::new();
+    setup_races(&world);
     
     // 1. Create the main protagonist
     world.run_command_success(&[
@@ -435,6 +455,7 @@ fn test_middle_earth_full_workflow() {
 #[test]
 fn test_database_persistence_middle_earth() {
     let world = TestWorld::new();
+    setup_races(&world);
     
     // Create a full cast of Middle-earth characters
     let characters = [
