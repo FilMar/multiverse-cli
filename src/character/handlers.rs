@@ -1,6 +1,6 @@
 use super::cli::CharacterCommands;
 use super::models::{Character, CharacterStatus};
-use crate::relations::{process_relations, EntityType};
+use crate::relations::{process_relations, EntityType, separate_relation_fields};
 use anyhow::Result;
 
 pub fn handle_character_command(command: CharacterCommands) -> Result<()> {
@@ -37,7 +37,8 @@ fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("👤 Creating character '{name}'");
     
     // Separate relation fields from regular fields  
-    let (relation_fields, regular_fields) = separate_relation_fields(set_args);
+    let relation_keys = ["episode", "location", "faction", "race", "system"];
+    let (relation_fields, regular_fields) = separate_relation_fields(set_args, &relation_keys);
     
     // Create character with regular fields FIRST
     let mut character = Character::create_new(name.clone(), regular_fields)?;
@@ -146,22 +147,3 @@ fn handle_delete(name: String, force: bool) -> Result<()> {
     Ok(())
 }
 
-/// Separate relation fields from regular character fields
-fn separate_relation_fields(set_args: Vec<(String, String)>) -> (Vec<(String, String)>, Vec<(String, String)>) {
-    let mut relation_fields = Vec::new();
-    let mut regular_fields = Vec::new();
-    
-    for (key, value) in set_args {
-        match key.as_str() {
-            "episode" => relation_fields.push((key, value)),
-            "location" => relation_fields.push((key, value)),
-            "faction" => relation_fields.push((key, value)),
-            "race" => relation_fields.push((key, value)),
-            "system" => relation_fields.push((key, value)),
-            // Add more relation types here as we implement them
-            _ => regular_fields.push((key, value)),
-        }
-    }
-    
-    (relation_fields, regular_fields)
-}

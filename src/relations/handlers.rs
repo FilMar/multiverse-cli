@@ -3,6 +3,22 @@
 use anyhow::Result;
 use crate::relations::{process_character_episode_relations, process_character_location_relations, process_character_faction_relations, process_character_race_relations, process_character_system_relations, process_race_system_relations, process_location_faction_relations, process_location_location_relations, process_location_system_relations, process_event_character_relations, process_event_location_relations, process_event_faction_relations};
 
+
+
+pub fn separate_relation_fields(set_args: Vec<(String, String)>, relation_keys: &[&str]) -> (Vec<(String, String)>, Vec<(String, String)>) {
+    let mut relation_fields = Vec::new();
+    let mut regular_fields = Vec::new();
+    for (key, value) in set_args {
+        if relation_keys.contains(&key.as_str()){
+            relation_fields.push((key, value));
+        }
+        else {
+            regular_fields.push((key, value));
+        }
+    }
+    (relation_fields, regular_fields)
+}
+
 /// Parse entity spec into name and role
 fn parse_entity_role(spec: &str) -> (&str, &str) {
     if spec.contains('*') {

@@ -1,6 +1,6 @@
 use super::cli::EpisodeCommands;
 use super::models::{Episode, EpisodeStatus};
-use crate::relations::{process_relations, EntityType};
+use crate::relations::{process_relations, EntityType, separate_relation_fields};
 use anyhow::Result;
 
 pub fn handle_episode_command(command: EpisodeCommands) -> Result<()> {
@@ -37,14 +37,24 @@ fn handle_create(story_name: String, set: Vec<(String, String)>) -> Result<()> {
     
     println!("📄 Creating episode in story '{}'...", story_name);
     
+    // Separate relation fields from regular fields  
+    let relation_keys = ["character"];
+    let (relation_fields, regular_fields) = separate_relation_fields(set.clone(), &relation_keys);
+    
     let mut episode = Episode::new_with_next_number(story_name.clone())?;
     
-    // Apply set arguments to episode before creating
-    if !set.is_empty() {
-        episode.process_set_args(set.clone())?;
+    // Apply regular set arguments to episode before creating
+    if !regular_fields.is_empty() {
+        episode.process_set_args(regular_fields.clone())?;
     }
     
     episode.create_with_file()?;
+    
+    // THEN process relations after episode exists in database
+    if !relation_fields.is_empty() {
+        let episode_id = format!("{}:{}", episode.story, episode.number);
+        process_relations(EntityType::Episode(episode_id), relation_fields)?;
+    }
     
     let world_root = WorldConfig::get_world_root()
         .context("Not in a multiverse project directory")?;
@@ -58,8 +68,8 @@ fn handle_create(story_name: String, set: Vec<(String, String)>) -> Result<()> {
     println!("   Story: {}", story_name);
     println!("   File: {}", episode_path.display());
     
-    // Extract title from set args if provided
-    if let Some((_, title)) = set.iter().find(|(key, _)| key == "title") {
+    // Extract title from regular fields if provided
+    if let Some((_, title)) = regular_fields.iter().find(|(key, _)| key == "title") {
         println!("   Title: {}", title);
     }
     

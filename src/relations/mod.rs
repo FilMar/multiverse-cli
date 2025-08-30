@@ -27,4 +27,4 @@ pub use location_system::process_location_system_relations;
 pub use event_character::process_event_character_relations;
 pub use event_location::process_event_location_relations;
 pub use event_faction::process_event_faction_relations;
-pub use handlers::{process_relations, EntityType};
+pub use handlers::{process_relations, EntityType, separate_relation_fields};

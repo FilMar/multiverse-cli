@@ -1,6 +1,6 @@
 use super::cli::EventCommands;
 use super::models::Event;
-use crate::relations::{process_relations, EntityType};
+use crate::relations::{process_relations, EntityType, separate_relation_fields};
 use anyhow::Result;
 
 pub fn handle_event_command(command: EventCommands) -> Result<()> {
@@ -60,7 +60,8 @@ fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("📅 Creating event '{name}' ({})", title);
 
     // Separate relation fields from regular fields  
-    let (relation_fields, regular_fields) = separate_relation_fields(set_args);
+    let relation_keys = ["character", "location", "faction"];
+    let (relation_fields, regular_fields) = separate_relation_fields(set_args, &relation_keys);
     
     // Normalize field names: title -> display_name
     let mut regular_fields = regular_fields;
@@ -246,20 +247,3 @@ fn handle_timeline() -> Result<()> {
     Ok(())
 }
 
-/// Separate relation fields from regular event fields
-fn separate_relation_fields(set_args: Vec<(String, String)>) -> (Vec<(String, String)>, Vec<(String, String)>) {
-    let mut relation_fields = Vec::new();
-    let mut regular_fields = Vec::new();
-    
-    for (key, value) in set_args {
-        match key.as_str() {
-            "character" => relation_fields.push((key, value)),
-            "location" => relation_fields.push((key, value)),
-            "faction" => relation_fields.push((key, value)),
-            // Add more relation types here as we implement them
-            _ => regular_fields.push((key, value)),
-        }
-    }
-    
-    (relation_fields, regular_fields)
-}

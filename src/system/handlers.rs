@@ -1,6 +1,6 @@
 use super::cli::SystemCommands;
 use super::models::{System, SystemStatus};
-use crate::relations::{process_relations, EntityType};
+use crate::relations::{process_relations, EntityType, separate_relation_fields};
 use anyhow::Result;
 
 pub fn handle_system_command(command: SystemCommands) -> Result<()> {
@@ -32,8 +32,20 @@ fn handle_update(name: String, set_args: Vec<(String, String)>) -> Result<()> {
 
 fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("⚙️  Creating system '{name}'");
-    let mut system = System::create_new(name.clone(), set_args)?;
+    
+    // Separate relation fields from regular fields  
+    let relation_keys = ["character", "location", "race"];
+    let (relation_fields, regular_fields) = separate_relation_fields(set_args, &relation_keys);
+    
+    // Create system with regular fields FIRST
+    let mut system = System::create_new(name.clone(), regular_fields)?;
     system.create()?;
+    
+    // THEN process relations after system exists in database
+    if !relation_fields.is_empty() {
+        process_relations(EntityType::System(name.clone()), relation_fields)?;
+    }
+    
     show_created_system(&system)?;
     Ok(())
 }

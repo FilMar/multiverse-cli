@@ -1,6 +1,6 @@
 use super::cli::RaceCommands;
 use super::models::{Race, RaceStatus};
-use crate::relations::{process_relations, EntityType};
+use crate::relations::{process_relations, EntityType, separate_relation_fields};
 use anyhow::{Result, Context};
 
 pub fn handle_race_command(command: RaceCommands) -> Result<()> {
@@ -21,7 +21,8 @@ fn handle_create(name: String, set_args: Vec<(String, String)>) -> Result<()> {
     println!("✨ Creating race: {}", name);
 
     // Separate relation fields from regular fields  
-    let (relation_fields, regular_fields) = separate_relation_fields(set_args);
+    let relation_keys = ["system", "character"];
+    let (relation_fields, regular_fields) = separate_relation_fields(set_args, &relation_keys);
     
     // Create race with regular fields FIRST
     let mut race = Race::create_new(name.clone(), regular_fields)?;
@@ -77,20 +78,6 @@ fn handle_list() -> Result<()> {
     Ok(())
 }
 
-fn separate_relation_fields(set_args: Vec<(String, String)>) -> (Vec<(String, String)>, Vec<(String, String)>) {
-    let mut relation_fields = Vec::new();
-    let mut regular_fields = Vec::new();
-    
-    for (key, value) in set_args {
-        match key.as_str() {
-            "system" => relation_fields.push((key, value)),
-            // Add more relation types here as we implement them
-            _ => regular_fields.push((key, value)),
-        }
-    }
-    
-    (relation_fields, regular_fields)
-}
 
 fn handle_info(name: String) -> Result<()> {
     let race = Race::get(&name)?
@@ -182,3 +169,5 @@ fn show_created_race(race: &Race) -> Result<()> {
     
     Ok(())
 }
+
+

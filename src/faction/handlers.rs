@@ -1,6 +1,6 @@
 use super::cli::FactionCommands;
 use super::models::Faction;
-use crate::relations::{process_relations, EntityType};
+use crate::relations::{process_relations, EntityType, separate_relation_fields};
 use anyhow::Result;
 
 pub fn handle_faction_command(command: FactionCommands) -> Result<()> {
@@ -52,9 +52,18 @@ fn handle_create(name: String, mut set_args: Vec<(String, String)>) -> Result<()
         }
     }
 
-    // Use Faction factory method with built-in validation
-    let mut faction = Faction::create_new(name.clone(), set_args)?;
+    // Separate relation fields from regular fields  
+    let relation_keys = ["character", "location", "event"];
+    let (relation_fields, regular_fields) = separate_relation_fields(set_args, &relation_keys);
+    
+    // Create faction with regular fields FIRST
+    let mut faction = Faction::create_new(name.clone(), regular_fields)?;
     faction.create()?;
+    
+    // THEN process relations after faction exists in database
+    if !relation_fields.is_empty() {
+        process_relations(EntityType::Faction(name.clone()), relation_fields)?;
+    }
     
     // Display success information
     show_created_faction(&faction)?;
@@ -158,3 +167,4 @@ fn handle_delete(name: String, force: bool) -> Result<()> {
     
     Ok(())
 }
+
