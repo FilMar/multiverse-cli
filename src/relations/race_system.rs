@@ -63,10 +63,14 @@ pub fn process_race_system_relations(race_name: &str, relations_str: &str) -> an
         let system_name = parts[0];
         
         let relation = RaceSystemRelation::parse_from_value(race_name, relation_part)?;
-        relation.create()?;
+        let is_new = relation.upsert()?;
         
-        // Print success message with original names
-        println!("✅ Created relation: {} -> {}", race_name, system_name);
+        // Print appropriate success message
+        if is_new {
+            println!("✅ Created relation: {} -> {}", race_name, system_name);
+        } else {
+            println!("🔄 Updated relation: {} <-> {}", race_name, system_name);
+        }
     }
 
     Ok(())

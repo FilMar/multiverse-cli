@@ -38,8 +38,13 @@ pub fn process_location_system_relations(location_name: &str, relations: &str) -
             infrastructure_type.clone(),
         );
         
-        relation.create()?;
-        println!("✅ Created relation: {} -> {} ({})", location_name, system_name, infrastructure_type);
+        let is_new = relation.upsert()?;
+        
+        if is_new {
+            println!("✅ Created relation: {} -> {} ({})", location_name, system_name, infrastructure_type);
+        } else {
+            println!("🔄 Updated relation: {} <-> {} ({})", location_name, system_name, infrastructure_type);
+        }
     }
     
     Ok(())

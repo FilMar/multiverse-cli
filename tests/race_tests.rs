@@ -96,8 +96,8 @@ fn test_race_bidirectional_with_character() -> Result<()> {
         "--set", "character=dwarf_warrior*champion"
     ])?;
     
-    // Verify we now have more relations (bidirectional)
-    assert!(test.query_count("character_race_relations")? >= 2);
+    // Verify we still have the same relation (it was updated, not duplicated)
+    assert!(test.query_count("character_race_relations")? == 1);
     
     Ok(())
 }
@@ -124,7 +124,7 @@ fn test_race_system_relationship() -> Result<()> {
     assert!(test.query_count("race_system_relations")? > 0);
     
     // Check the relation has correct data
-    let relation_data = test.query("SELECT relationship_type FROM race_system_relations")?;
+    let relation_data = test.query("SELECT affinity FROM race_system_relations")?;
     assert!(relation_data.contains("rules"));
     
     Ok(())

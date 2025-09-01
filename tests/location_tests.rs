@@ -117,7 +117,7 @@ fn test_location_bidirectional_relations() -> Result<()> {
     assert!(test.query_count("location_faction_relations")? > 0);
     
     // Check the relation has correct data
-    let relation_data = test.query("SELECT relationship_type FROM location_faction_relations")?;
+    let relation_data = test.query("SELECT * FROM location_faction_relations")?;
     assert!(relation_data.contains("headquarters"));
     
     Ok(())

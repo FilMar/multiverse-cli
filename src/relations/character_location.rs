@@ -65,10 +65,14 @@ pub fn process_character_location_relations(character_name: &str, relations_str:
         let location_name = parts[0];
         
         let relation = CharacterLocationRelation::parse_from_value(character_name, relation_part)?;
-        relation.create()?;
+        let is_new = relation.upsert()?;
         
-        // Print success message with original names
-        println!("✅ Created relation: {} -> {}", character_name, location_name);
+        // Print appropriate success message
+        if is_new {
+            println!("✅ Created relation: {} -> {}", character_name, location_name);
+        } else {
+            println!("🔄 Updated relation: {} <-> {}", character_name, location_name);
+        }
     }
 
     Ok(())

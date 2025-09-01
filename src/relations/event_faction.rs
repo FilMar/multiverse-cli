@@ -38,8 +38,13 @@ pub fn process_event_faction_relations(event_name: &str, relations: &str) -> any
             faction_role.clone(),
         );
         
-        relation.create()?;
-        println!("✅ Created relation: {} -> {} ({})", event_name, faction_name, faction_role);
+        let is_new = relation.upsert()?;
+        
+        if is_new {
+            println!("✅ Created relation: {} -> {} ({})", event_name, faction_name, faction_role);
+        } else {
+            println!("🔄 Updated relation: {} <-> {} ({})", event_name, faction_name, faction_role);
+        }
     }
     
     Ok(())

@@ -38,8 +38,13 @@ pub fn process_location_location_relations(from_location: &str, relations: &[Str
                 relationship_type.clone(),
             );
             
-            relation.create()?;
-            println!("✅ Created relation: {} -> {} ({})", from_location, to_location, relationship_type);
+            let is_new = relation.upsert()?;
+            
+            if is_new {
+                println!("✅ Created relation: {} -> {} ({})", from_location, to_location, relationship_type);
+            } else {
+                println!("🔄 Updated relation: {} <-> {} ({})", from_location, to_location, relationship_type);
+            }
         }
     }
     

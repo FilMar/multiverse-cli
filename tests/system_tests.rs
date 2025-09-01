@@ -98,7 +98,7 @@ fn test_system_bidirectional_with_location() -> Result<()> {
     assert!(test.query_count("location_system_relations")? > 0);
     
     // Check the relation has correct data
-    let relation_data = test.query("SELECT relationship_type FROM location_system_relations")?;
+    let relation_data = test.query("SELECT infrastructure_type FROM location_system_relations")?;
     assert!(relation_data.contains("orbits"));
     
     Ok(())

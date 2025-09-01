@@ -38,8 +38,13 @@ pub fn process_event_location_relations(event_name: &str, relations: &str) -> an
             location_role.clone(),
         );
         
-        relation.create()?;
-        println!("✅ Created relation: {} -> {} ({})", event_name, location_name, location_role);
+        let is_new = relation.upsert()?;
+        
+        if is_new {
+            println!("✅ Created relation: {} -> {} ({})", event_name, location_name, location_role);
+        } else {
+            println!("🔄 Updated relation: {} <-> {} ({})", event_name, location_name, location_role);
+        }
     }
     
     Ok(())

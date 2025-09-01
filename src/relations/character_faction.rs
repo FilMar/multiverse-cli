@@ -65,10 +65,14 @@ pub fn process_character_faction_relations(character_name: &str, relations_str: 
         let faction_name = parts[0];
         
         let relation = CharacterFactionRelation::parse_from_value(character_name, relation_part)?;
-        relation.create()?;
+        let is_new = relation.upsert()?;
         
-        // Print success message with original names
-        println!("✅ Created relation: {} -> {}", character_name, faction_name);
+        // Print appropriate success message
+        if is_new {
+            println!("✅ Created relation: {} -> {}", character_name, faction_name);
+        } else {
+            println!("🔄 Updated relation: {} <-> {}", character_name, faction_name);
+        }
     }
 
     Ok(())

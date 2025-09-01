@@ -38,8 +38,13 @@ pub fn process_character_system_relations(character_name: &str, relations: &str)
             usage_type.clone(),
         );
         
-        relation.create()?;
-        println!("✅ Created relation: {} -> {} ({})", character_name, system_name, usage_type);
+        let is_new = relation.upsert()?;
+        
+        if is_new {
+            println!("✅ Created relation: {} -> {} ({})", character_name, system_name, usage_type);
+        } else {
+            println!("🔄 Updated relation: {} <-> {} ({})", character_name, system_name, usage_type);
+        }
     }
     
     Ok(())

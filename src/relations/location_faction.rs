@@ -62,10 +62,14 @@ pub fn process_location_faction_relations(location_name: &str, relations_str: &s
         let faction_name = parts[0];
         
         let relation = LocationFactionRelation::parse_from_value(location_name, relation_part)?;
-        relation.create()?;
+        let is_new = relation.upsert()?;
         
-        // Print success message with original names
-        println!("✅ Created relation: {} -> {}", location_name, faction_name);
+        // Print appropriate success message
+        if is_new {
+            println!("✅ Created relation: {} -> {}", location_name, faction_name);
+        } else {
+            println!("🔄 Updated relation: {} <-> {}", location_name, faction_name);
+        }
     }
 
     Ok(())

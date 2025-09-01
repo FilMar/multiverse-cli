@@ -45,6 +45,35 @@ macro_rules! define_relation {
                 Ok(())
             }
 
+            /// Update existing relation in database
+            pub fn update(&self) -> Result<()> {
+                let db_path = crate::world::WorldConfig::get_database_path()?;
+                let conn = crate::database::get_connection(&db_path)?;
+
+                Relations::update_relation(&conn, &self.from_id, &self.to_id, $(&self.$field_name),*)?;
+
+                Ok(())
+            }
+
+            /// Check if relation exists
+            pub fn exists(&self) -> Result<bool> {
+                let db_path = crate::world::WorldConfig::get_database_path()?;
+                let conn = crate::database::get_connection(&db_path)?;
+
+                Relations::relation_exists(&conn, &self.from_id, &self.to_id)
+            }
+
+            /// Create or update relation (upsert)
+            pub fn upsert(&self) -> Result<bool> {
+                if self.exists()? {
+                    self.update()?;
+                    Ok(false) // Updated existing
+                } else {
+                    self.create()?;
+                    Ok(true) // Created new
+                }
+            }
+
             /// Delete this relation from the database
             pub fn delete(&self) -> Result<()> {
                 let db_path = crate::world::WorldConfig::get_database_path()?;
@@ -143,6 +172,46 @@ macro_rules! define_relation {
                 let sql = format!("DELETE FROM {} WHERE from_id = ? AND to_id = ?", $table_name);
                 conn.execute(&sql, [from_id, to_id])?;
                 Ok(())
+            }
+
+            pub fn update_relation(
+                conn: &Connection,
+                from_id: &str,
+                to_id: &str,
+                $($field_name: &$field_type),*
+            ) -> Result<()> {
+                let mut update_fields = Vec::new();
+                let mut values: Vec<&dyn rusqlite::ToSql> = Vec::new();
+                
+                $(
+                    update_fields.push(format!("{} = ?", stringify!($field_name)));
+                    values.push($field_name);
+                )*
+                
+                values.push(&from_id);
+                values.push(&to_id);
+                
+                let sql = format!(
+                    "UPDATE {} SET {} WHERE from_id = ? AND to_id = ?",
+                    $table_name,
+                    update_fields.join(", ")
+                );
+                
+                let rows_affected = conn.execute(&sql, &values[..])?;
+                
+                if rows_affected == 0 {
+                    return Err(anyhow::anyhow!("No relation found to update between {} and {}", from_id, to_id));
+                }
+
+                Ok(())
+            }
+
+            pub fn relation_exists(conn: &Connection, from_id: &str, to_id: &str) -> Result<bool> {
+                let check_sql = format!("SELECT COUNT(*) FROM {} WHERE from_id = ? AND to_id = ?", $table_name);
+                let mut stmt = conn.prepare(&check_sql)?;
+                let count: i64 = stmt.query_row([from_id, to_id], |row| row.get(0))?;
+                
+                Ok(count > 0)
             }
         }
     };
