@@ -47,7 +47,6 @@ fn handle_info() -> Result<()> {
 }
 
 fn handle_query_command(sql: String) -> Result<()> {
-    println!("🔍 Executing query...");
     database::execute_query(&sql)
 }
 

@@ -1,6 +1,7 @@
 use rusqlite::{Connection, Result as SqliteResult};
 use std::path::Path;
 use anyhow::{Result, Context};
+use serde_json::{json, Value as JsonValue};
 
 /// Get a database connection for a specific database file
 pub fn get_connection(db_path: &Path) -> Result<Connection> {
@@ -65,7 +66,7 @@ fn validate_select_only(sql: &str) -> Result<()> {
     Ok(())
 }
 
-/// Execute a SELECT query and return results as formatted table
+/// Execute a SELECT query and return results as JSON
 pub fn execute_query(sql: &str) -> Result<()> {
     // Validate query is SELECT-only
     validate_select_only(sql)?;
@@ -85,112 +86,64 @@ pub fn execute_query(sql: &str) -> Result<()> {
         .collect();
     
     if column_names.is_empty() {
-        println!("No columns returned");
+        let result = json!({
+            "query": sql,
+            "columns": [],
+            "rows": [],
+            "count": 0
+        });
+        println!("{}", serde_json::to_string_pretty(&result)?);
         return Ok(());
     }
     
-    // Execute query and collect all rows
+    // Execute query - rusqlite non ha conversione automatica, tocca farlo a mano
+    let mut all_rows = Vec::new();
     let rows = stmt.query_map([], |row| {
-        let mut values = Vec::new();
-        for i in 0..column_names.len() {
-            // Try to get as string, fallback for different types
-            let value = match row.get::<_, String>(i) {
-                Ok(s) => s,
-                Err(_) => {
-                    // Try other types
-                    if let Ok(i) = row.get::<_, i64>(i) {
-                        i.to_string()
-                    } else if let Ok(f) = row.get::<_, f64>(i) {
-                        f.to_string()
+        let mut row_map = serde_json::Map::new();
+        
+        for (i, col_name) in column_names.iter().enumerate() {
+            // Rusqlite value handling - prova i tipi più comuni
+            let value = match row.get_ref(i)? {
+                rusqlite::types::ValueRef::Null => JsonValue::Null,
+                rusqlite::types::ValueRef::Integer(i) => JsonValue::Number(serde_json::Number::from(i)),
+                rusqlite::types::ValueRef::Real(f) => {
+                    if let Some(n) = serde_json::Number::from_f64(f) {
+                        JsonValue::Number(n)
                     } else {
-                        "NULL".to_string()
+                        JsonValue::String(f.to_string())
                     }
+                },
+                rusqlite::types::ValueRef::Text(s) => {
+                    let text = String::from_utf8_lossy(s).to_string();
+                    // Try to parse as JSON first, fallback to string
+                    serde_json::from_str(&text).unwrap_or(JsonValue::String(text))
+                },
+                rusqlite::types::ValueRef::Blob(b) => {
+                    JsonValue::String(format!("<blob:{} bytes>", b.len()))
                 }
             };
-            values.push(value);
+            row_map.insert(col_name.clone(), value);
         }
-        Ok(values)
+        
+        Ok(JsonValue::Object(row_map))
     })?;
     
-    let mut all_rows = Vec::new();
-    for row in rows {
-        all_rows.push(row?);
+    for row_result in rows {
+        all_rows.push(row_result?);
     }
     
-    // Print results as table
-    print_table(&column_names, &all_rows);
+    // Create structured JSON response
+    let result = json!({
+        "query": sql,
+        "columns": column_names,
+        "rows": all_rows,
+        "count": all_rows.len()
+    });
+    
+    // Pretty-print JSON
+    println!("{}", serde_json::to_string_pretty(&result)?);
     
     Ok(())
 }
 
-/// Print results in a nice table format
-fn print_table(headers: &[String], rows: &[Vec<String>]) {
-    if rows.is_empty() {
-        println!("📊 No results found");
-        return;
-    }
-    
-    // Calculate column widths
-    let mut widths: Vec<usize> = headers.iter().map(|h| h.len()).collect();
-    for row in rows {
-        for (i, value) in row.iter().enumerate() {
-            if i < widths.len() {
-                widths[i] = widths[i].max(value.len());
-            }
-        }
-    }
-    
-    // Print header
-    print!("┌");
-    for (i, width) in widths.iter().enumerate() {
-        print!("{}", "─".repeat(width + 2));
-        if i < widths.len() - 1 {
-            print!("┬");
-        }
-    }
-    println!("┐");
-    
-    print!("│");
-    for (i, (header, width)) in headers.iter().zip(&widths).enumerate() {
-        print!(" {:width$} ", header, width = width);
-        if i < headers.len() - 1 {
-            print!("│");
-        }
-    }
-    println!("│");
-    
-    // Print separator
-    print!("├");
-    for (i, width) in widths.iter().enumerate() {
-        print!("{}", "─".repeat(width + 2));
-        if i < widths.len() - 1 {
-            print!("┼");
-        }
-    }
-    println!("┤");
-    
-    // Print rows
-    for row in rows {
-        print!("│");
-        for (i, (value, width)) in row.iter().zip(&widths).enumerate() {
-            print!(" {:width$} ", value, width = width);
-            if i < row.len() - 1 {
-                print!("│");
-            }
-        }
-        println!("│");
-    }
-    
-    // Print bottom
-    print!("└");
-    for (i, width) in widths.iter().enumerate() {
-        print!("{}", "─".repeat(width + 2));
-        if i < widths.len() - 1 {
-            print!("┴");
-        }
-    }
-    println!("┘");
-    
-    println!("📊 {} row(s) returned", rows.len());
-}
 

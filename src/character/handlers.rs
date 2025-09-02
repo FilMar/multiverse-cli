@@ -2,6 +2,8 @@ use super::cli::CharacterCommands;
 use super::models::{Character, CharacterStatus};
 use crate::relations::{process_relations, EntityType, separate_relation_fields};
 use anyhow::Result;
+use serde_json::{json, Value as JsonValue};
+use crate::world::WorldConfig;
 
 pub fn handle_character_command(command: CharacterCommands) -> Result<()> {
     match command {
